@@ -1,13 +1,13 @@
 import mysql.connector
 
 def conectar_banco():
-    conexao = mysql.connector.connect(
+    meudb = mysql.connector.connect(
         host="localhost",
-        user="seu_usuario",
-        password="sua_senha",
-        database="nome_do_banco"
+        user="root",
+        password="gcc272",
+        database="consulta_net"
     )
-    return conexao
+    return meudb
 
 def verificar_login(usuario, senha):
     conexao = conectar_banco()
@@ -18,31 +18,3 @@ def verificar_login(usuario, senha):
     cursor.close()
     conexao.close()
     return resultado
-
-from flask import Flask, request, redirect, url_for
-
-app = Flask(__name__)
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        usuario = request.form['username']
-        senha = request.form['password']
-        if verificar_login(usuario, senha):
-            return redirect(url_for('pagina_protegida'))
-        else:
-            return "Login falhou. Tente novamente."
-    return '''
-        <form method="post">
-            Usuário: <input type="text" name="username"><br>
-            Senha: <input type="password" name="password"><br>
-            <input type="submit" value="Login">
-        </form>
-    '''
-
-@app.route('/pagina_protegida')
-def pagina_protegida():
-    return "Bem-vindo à página protegida!"
-
-if __name__ == '__main__':
-    app.run(debug=True)
