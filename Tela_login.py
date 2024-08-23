@@ -8,20 +8,7 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-usuarios = {'usuario@example.com': 'senha123'}
-
-class User(UserMixin):
-    def __init__(self, id):
-        self.id = id
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User(user_id)
-
-@app.route('/')
-def home():
-    return render_template('login.html')
-
+usuarios = {'ufgjklfmyjçfltkypedt
 @app.route('/login', methods=['POST'])
 def login():
     email = request.form['email']
