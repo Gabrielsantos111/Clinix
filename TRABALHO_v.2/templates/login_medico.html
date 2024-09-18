@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login Médico</title>
+    <link rel="stylesheet" href="../static/css/login_medico.css">
+</head>
+<body>
+    <h1>Login Médico</h1>
+    <form action="/login_medico" method="post">
+        <label for="crm">CRM:</label>
+        <input type="text" id="crm" name="crm" required><br>
+        <label for="senha">Senha:</label>
+        <input type="password" id="senha" name="senha" required><br>
+        <button type="submit" onclick="window.location.href='/pag_medico'">Login</button>
+    </form>
+    <br>
+    <button onclick="window.location.href='/cadastro_medico'">Cadastrar Médico</button>
+</body>
+</html>
