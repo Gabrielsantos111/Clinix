@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Lista de Médicos</title>
+    <link rel="stylesheet" href="../static/css/tela_medico.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Lista de Médicos</h1>
+        <table>
+            <tr>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Especialidade</th>
+                <th>Disponibilidade</th>
+                <th>Idade</th>
+                <th>Status</th>
+            </tr>
+            {% for medico in medicos %}
+            <tr>
+                <td>{{ medico[0] }}</td>
+                <td>{{ medico[1] }}</td>
+                <td>{{ medico[2] }}</td>
+                <td>{{ medico[3] }}</td>
+                <td>{{ medico[4] }}</td>
+                <td>{{ medico[5] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <a href="/tela_usuario" class="btn">Voltar</a>
+    </div>
+</body>
+</html>
