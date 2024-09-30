@@ -1,19 +1,36 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Página do Médico</title>
+    <title>Tela de Médicos</title>
+    <link rel="stylesheet" href="../static/css/tela_medico.css">
 </head>
 <body>
     <div class="container">
-        <h1>Bem-vindo, Médico!</h1>
-        <p>Esta é a página do médico.</p>
-        <div class="actions">
-            <button>Enviar Arquivos</button>
-            <button>Atualizar Dados</button>
-            <button>Excluir Cadastro</button>
-        </div>
+        <h1>Tela de Médicos</h1>
+        <table>
+            <tr>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Especialidade</th>
+                <th>Disponibilidade</th>
+                <th>Idade</th>
+                <th>Status</th>
+            </tr>
+            {% for medico in medicos %}
+            <tr>
+                <td>{{ medico[0] }}</td>
+                <td>{{ medico[1] }}</td>
+                <td>{{ medico[2] }}</td>
+                <td>{{ medico[3] }}</td>
+                <td>{{ medico[4] }}</td>
+                <td>{{ medico[5] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <a href="/atualizar_cadastro_medico" class="btn">Atualizar Dados</a>
+        <form action="/excluir_cadastro_medico" method="post">
+            <button type="submit">Excluir Cadastro</button>
     </div>
 </body>
 </html>

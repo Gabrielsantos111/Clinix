@@ -40,6 +40,27 @@ def obter_informacoes_usuario(email):
             }
     return None
 
+def obter_informacoes_medico(crm):
+    # Conecta ao banco de dados MySQL
+    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+    if conexao_bd.is_connected():
+        cursor = conexao_bd.cursor()
+        cursor.execute('SELECT nomeMedicos, emailMedicos, especialidadeMedicos, disponibilidadeMedicos, idadeMedicos, statusMedicos, crmMedicos FROM medicos WHERE crmMedicos = %s', (crm,))
+        medico = cursor.fetchone()
+        cursor.close()
+        conexao_bd.close()
+        if medico:
+            return {
+                'nome': medico[0],
+                'email': medico[1],
+                'especialidade': medico[2],
+                'disponibilidade': medico[3],
+                'idade': medico[4],
+                'status': medico[5],
+                'crm': medico[6]
+            }
+    return None
+
 #rota página inicial
 @app.route('/')
 def home():
@@ -314,7 +335,7 @@ def excluir_cadastro():
     
 @app.route('/pag_medico')
 def pag_medico():
-        return render_template('pag_medico.html')
+    return render_template('pag_medico.html')
     
 @app.route('/cadastro_medico', methods=['POST'])
 def cadastrar_medico():
@@ -345,7 +366,6 @@ def login_medico():
     if request.method == 'POST':
         crm = request.form.get('crm')
         senha = request.form.get('senha')
-
         # Conecta ao banco de dados MySQL
         conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
         if conexao_bd.is_connected():
@@ -359,7 +379,7 @@ def login_medico():
                 flash('Login realizado com sucesso')
                 return redirect('/pag_medico')
             else:
-                flash('Email ou senha inválidos')
+                flash('CRM ou senha inválidos')
                 return redirect('/login_medico')
         else:
             flash('Erro ao conectar ao banco de dados')
@@ -369,6 +389,46 @@ def login_medico():
 @app.route('/cadastro_medico')
 def cadastro_medico():
     return render_template('cadastro_medico.html')
+
+@app.route('/atualizar_cadastro_medico', methods=['GET'])
+def atualizar_cadastro_medico():
+    if logado:
+        crm = request.args.get('crm')
+        medico = obter_informacoes_medico(crm)
+        if medico:
+            return render_template('atualizar_cadastro_medico.html', medico=medico)
+        flash('Erro ao obter informações do médico')
+        return redirect('/pag_medico')
+    else:
+        return redirect('/')
+    
+@app.route('/confirmar_exclusao_medico')
+def confirmar_exclusao_medico():
+    if logado:
+        return render_template('confirmar_exclusao_medico.html')
+    else:
+        return redirect('/login_medico')
+
+@app.route('/excluir_cadastro_medico', methods=['POST'])
+def excluir_cadastro_medico():
+    if logado:
+        crm = request.form.get('crm')
+        # Conecta ao banco de dados MySQL
+        conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+        if conexao_bd.is_connected():
+            cursor = conexao_bd.cursor()
+            cursor.execute('DELETE FROM medicos WHERE crmMedicos = %s', (crm,))
+            conexao_bd.commit()
+            cursor.close()
+            conexao_bd.close()
+            flash('Cadastro do médico excluído com sucesso')
+            return redirect('/login_medico')
+        else:
+            flash('Erro ao conectar ao banco de dados')
+            return redirect('/pag_medico')
+    else:
+        flash('Usuário não está logado')
+        return redirect('/')
 
 #inicia Flask
 if __name__ == "__main__":

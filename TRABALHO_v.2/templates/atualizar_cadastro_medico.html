@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atualização de Cadastro</title>
+    <link rel="stylesheet" href="../static/css/atualizar_cadastro.css">
+</head>
+<body>
+    <form method="POST" action="/atualizar_cadastro_medico">
+        <input type="hidden" name="crm" value="{{ medico.crm }}">
+        <label for="nome">Nome:</label>
+        <input type="text" id="nome" name="nome" value="{{ medico.nome }}">
+        
+        <label for="senha">Senha:</label>
+        <input type="password" id="senha" name="senha" value="{{ medico.senha }}">
+        
+        <label for="idade">Idade:</label>
+        <input type="number" id="idade" name="idade" value="{{ medico.idade }}">
+        
+        <label for="status">status:</label>
+        <select id="status" name="status" value="{{ medico.status }}" required>
+            <option value="Ativo">Ativo</option>
+            <option value="Inativo">Inativo</option>
+        </select>
+        
+        <label for="especialidade">Especialidade:</label>
+        <input type="tel" id="especialidade" name="especialidade" value="{{ medico.especialidade }}">
+
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" value="{{ medico.email }}">
+
+        <label for="disponibilidade">Disponibilidade:</label>
+        <input type="text" id="disponibilidade" name="disponibilidade" value="{{ medico.disponibilidade }}">
+        
+        <button type="submit">Atualizar</button>
+    </form>
+    
+    <form method="POST" action="/excluir_cadastro_medico">
+        <button type="submit">Excluir Cadastro</button>
+    </form>
+</body>
+</html>
