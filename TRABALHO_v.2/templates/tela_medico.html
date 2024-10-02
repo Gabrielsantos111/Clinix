@@ -1,34 +1,46 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lista de Médicos</title>
     <link rel="stylesheet" href="../static/css/tela_medico.css">
 </head>
 <body>
+    <div class="header">
+        Lista de Médicos
+    </div>
     <div class="container">
-        <h1>Lista de Médicos</h1>
-        <table>
-            <tr>
-                <th>Nome</th>
-                <th>Email</th>
-                <th>Especialidade</th>
-                <th>Disponibilidade</th>
-                <th>Idade</th>
-                <th>Status</th>
-            </tr>
-            {% for medico in medicos %}
-            <tr>
-                <td>{{ medico[0] }}</td>
-                <td>{{ medico[1] }}</td>
-                <td>{{ medico[2] }}</td>
-                <td>{{ medico[3] }}</td>
-                <td>{{ medico[4] }}</td>
-                <td>{{ medico[5] }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        <a href="/tela_usuario" class="btn">Voltar</a>
+        <div class="box">
+            <h2>Lista de Médicos</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Especialidade</th>
+                        <th>Disponibilidade</th>
+                        <th>Idade</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for medico in medicos %}
+                    <tr>
+                        <td>{{ medico[0] }}</td>
+                        <td>{{ medico[1] }}</td>
+                        <td>{{ medico[2] }}</td>
+                        <td>{{ medico[3] }}</td>
+                        <td>{{ medico[4] }}</td>
+                        <td>{{ medico[5] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="button-group">
+                <button onclick="window.location.href='/tela_usuario'">Voltar</button>
+            </div>
+        </div>
     </div>
 </body>
 </html>
