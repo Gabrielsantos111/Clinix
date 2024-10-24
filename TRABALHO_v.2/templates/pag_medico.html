@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tela do Médico</title>
+    <link rel="stylesheet" href="../static/css/pag_medico.css">
+</head>
+<body>
+    <div class="header">
+        Tela do Médico
+    </div>
+
+    <div class="container">
+        <div class="box">
+            <h2>Tela do Médico</h2>
+
+            <!-- Exibe as informações básicas do médico -->
+            {% if medico_info %}
+                <h3>Nome: {{ medico_info[0][0] }}</h3>
+                <h3>Email: {{ medico_info[0][1] }}</h3>
+                <h3>Idade: {{ medico_info[0][2] }}</h3>
+                <h3>Status: {{ medico_info[0][3] }}</h3>
+                <h3>Especialidade: {{ medico_info[0][5] }}</h3>
+
+                <!-- Tabela de Disponibilidade -->
+                <h4>Disponibilidade:</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data Disponível</th>
+                            <th>Hora de Início</th>
+                            <th>Hora de Fim</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for info in medico_info %}
+                        <tr>
+                            <td>{{ info[6] }}</td>
+                            <td>{{ info[7] }}</td>
+                            <td>{{ info[8] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <div class="button-group">
+                    <!-- Botões para atualizar dados, excluir e alterar disponibilidade -->
+                    <button onclick="window.location.href='/atualizar_cadastro_medico?crm={{ medico_info[0][4] }}'" class="btn">Atualizar Dados</button>
+                    <form action="/excluir_cadastro_medico" method="POST" style="display:inline;">
+                        <input type="hidden" name="crm" value="{{ medico_info[0][4] }}">
+                        <button type="submit" class="btn-secondary">Excluir Cadastro</button>
+                    </form>
+                    <button onclick="window.location.href='/alterar_disponibilidade?crm={{ medico_info[0][4] }}'" class="btn">Alterar Disponibilidade</button>
+                </div>
+            {% else %}
+                <p>Informações não encontradas.</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

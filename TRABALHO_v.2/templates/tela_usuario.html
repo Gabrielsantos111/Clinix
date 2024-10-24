@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil do Paciente</title>
+    <link rel="stylesheet" href="../static/css/tela_usuario.css">
+</head>
+<body>
+
+    <div class="header">
+        Perfil do Paciente
+    </div>
+
+    <div class="container">
+        <div class="box">
+            <h2>Informações do Paciente</h2>
+            <div class="user-info">
+                <p><strong>Email:</strong> {{ usuario.email }}</p>
+                <p><strong>Nome:</strong> {{ usuario.nome }}</p>
+                <p><strong>Sexo:</strong> {{ usuario.sexo }}</p>
+                <p><strong>Idade:</strong> {{ usuario.idade }}</p>
+                <p><strong>Telefone:</strong> {{ usuario.telefone }}</p>
+                <p><strong>Endereço:</strong> {{ usuario.endereco }}</p>
+            </div>
+            <div class="button-group">
+                <button onclick="window.location.href='/tela_medico'">Médicos</button>
+                <button onclick="window.location.href='/pag_download'">Baixar Arquivos</button>
+                <form action="/atualizar_cadastro" method="get">
+                    <button type="submit">Atualizar Dados</button>
+                </form>
+                <form action="/excluir_cadastro" method="post">
+                    <button type="submit">Excluir Cadastro</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
