@@ -66,16 +66,6 @@ def home():
     logado = False
     return render_template('login.html')
 
-#rota página de administrador ******************************
-@app.route('/adm')
-def adm():
-    if logado:
-        with open('usuarios.json') as usuariosTemp:
-            usuarios = json.load(usuariosTemp)  # carrega dados dos usuários do JSON
-        return render_template("administrador.html", usuarios=usuarios)  
-    else:
-        return redirect('/')  
-
 #rota página download
 @app.route('/pag_download')
 def pag_download():
@@ -86,7 +76,7 @@ def pag_download():
         return render_template("pag_download.html", arquivos=arquivo)  
     else:
         return redirect('/')  
-
+    
 #rota página tela usuário
 @app.route('/tela_usuario')
 def tela_usuario():
@@ -170,25 +160,6 @@ def cadastrarUsuario():
 
     return redirect('/')
 
-#rota excluir usuário **************
-@app.route('/excluirUsuario', methods=['POST'])
-def excluirUsuario():
-    global logado
-    logado = True
-    usuario = request.form.get('usuarioPexcluir')  
-    usuarioDict = ast.literal_eval(usuario)  
-    email = usuarioDict['emailUsuario']
-    with open('usuarios.json') as usuariosTemp:
-        usuariosJson = json.load(usuariosTemp)  
-        for c in usuariosJson:
-            if c == usuarioDict:
-                usuariosJson.remove(usuarioDict)  
-                with open('usuarios.json', 'w') as usuarioAexcluir:
-                    json.dump(usuariosJson, usuarioAexcluir, indent=4)  
-
-    flash(f'{email} Excluido')  
-    return redirect('/adm')
-
 #rota upload arquivos
 @app.route("/upload", methods=['POST'])
 def upload():
@@ -239,7 +210,6 @@ def reset_senha():
 
     return redirect('/')
 
-#rota tela medico
 @app.route('/tela_medico')
 def tela_medico():
     if logado:
@@ -255,9 +225,7 @@ def tela_medico():
         else:
             flash('Erro ao conectar ao banco de dados')
             return redirect('/')
-    else:
-        return redirect('/')
-    
+
 @app.route('/atualizar_cadastro')
 def atualizar_cadastro():
     if logado:
@@ -339,7 +307,6 @@ def pag_medico():
         return redirect('/login_medico')
 
     crm_logado = session.get('crm')  # Obtém o CRM da sessão
-
     # Conecta ao banco de dados MySQL
     conexao_bd = mysql.connector.connect(
         host='localhost', 
@@ -347,11 +314,9 @@ def pag_medico():
         user='root', 
         password='gcc272'
     )
-    
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
-
             # Seleciona os dados do médico logado
             cursor.execute('''
                 SELECT m.nomeMedicos, m.emailMedicos, m.idadeMedicos, m.statusMedicos, m.crmMedicos, e.nomeEspecialidade, d.dataDisponibilidade, d.hora_inicio, d.hora_fim
@@ -366,22 +331,18 @@ def pag_medico():
 
             cursor.close()
             conexao_bd.close()
-
             if medico_info:
                 # Renderiza a página com as informações do médico
                 return render_template('pag_medico.html', medico_info=medico_info)
             else:
                 flash('Médico não encontrado.')
                 return redirect('/login_medico')
-        
         except mysql.connector.Error as err:
             flash(f'Erro ao conectar ao banco de dados: {err}')
             return redirect('/login_medico')
-
     else:
         flash('Erro ao conectar ao banco de dados.')
         return redirect('/login_medico')
-
 
 @app.route('/cadastro_medico', methods=['GET', 'POST'])
 def cadastro_medico():
@@ -394,7 +355,6 @@ def cadastro_medico():
         crm = request.form.get('crm')
         senha = request.form.get('senha')
         especialidade = request.form.get('especialidade')
-
         # Conecta ao banco de dados MySQL
         conexao_bd = mysql.connector.connect(
             host='localhost', 
@@ -403,7 +363,6 @@ def cadastro_medico():
             password='gcc272'
         )
         cursor = conexao_bd.cursor()
-
         # Insere os dados do médico na tabela 'medicos'
         cursor.execute('''
             INSERT INTO medicos (nomeMedicos, emailMedicos, idadeMedicos, statusMedicos, crmMedicos, senhaMedicos) 
@@ -411,20 +370,16 @@ def cadastro_medico():
         ''', (nome, email, idade, status, crm, senha))
         
         idMedico = cursor.lastrowid  # Obtem o ID do médico recém-cadastrado
-
         # Insere a especialidade na tabela de relacionamento
         cursor.execute('''
             INSERT INTO medicos_especialidades (idMedico, idEspecialidade) 
             VALUES (%s, %s)
         ''', (idMedico, especialidade))
-        
         # Confirma as mudanças no banco de dados
         conexao_bd.commit()
         cursor.close()
         conexao_bd.close()
-        
         return redirect('/pag_medico')
-
     # Se for um GET, busca as especialidades disponíveis
     conexao_bd = mysql.connector.connect(
         host='localhost', 
@@ -437,22 +392,17 @@ def cadastro_medico():
     especialidades = cursor.fetchall()
     cursor.close()
     conexao_bd.close()
-
     return render_template('cadastro_medico.html', especialidades=especialidades)
-
-
 
 @app.route('/login_medico', methods=['GET', 'POST'])
 def login_medico():
     if request.method == 'POST':
         crm = request.form.get('crm')
         senha = request.form.get('senha')
-        
         # Verifica se os campos estão preenchidos
         if not crm or not senha:
             flash('CRM e senha são obrigatórios')
             return redirect('/login_medico')
-
         # Conecta ao banco de dados MySQL
         try:
             conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
@@ -477,11 +427,8 @@ def login_medico():
         except mysql.connector.Error as err:
             flash(f'Erro ao conectar ao banco de dados: {err}')
             return redirect('/login_medico')
-
     # Se for uma requisição GET, renderiza a página de login
     return render_template('login_medico.html')
-
-
 
 @app.route('/excluir_cadastro_medico', methods=['POST'])
 def excluir_cadastro_medico():
@@ -490,28 +437,24 @@ def excluir_cadastro_medico():
         return redirect('/login_medico')
 
     crm = session.get('crm')  # Obtém o CRM da sessão
-
     # Conecta ao banco de dados MySQL
     conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
-
-            # Verifica se o médico realmente existe
+            # Verifica se o médico realmente existe e obtém o idMedico
             cursor.execute('SELECT idMedicos FROM medicos WHERE crmMedicos = %s', (crm,))
             medico = cursor.fetchone()
 
             if medico:
                 idMedico = medico[0]
-
-                # Primeiro, exclua os registros relacionados na tabela de especialidades
+                # Excluir registros relacionados na tabela de disponibilidade_medicos
+                cursor.execute('DELETE FROM disponibilidade_medicos WHERE idMedico = %s', (idMedico,))
+                # Excluir registros relacionados na tabela medicos_especialidades
                 cursor.execute('DELETE FROM medicos_especialidades WHERE idMedico = %s', (idMedico,))
-
                 # Em seguida, exclua o médico da tabela 'medicos'
                 cursor.execute('DELETE FROM medicos WHERE crmMedicos = %s', (crm,))
-                
                 conexao_bd.commit()  # Aplica a exclusão
-
                 # Limpa a sessão após a exclusão
                 session.pop('crm', None)
 
@@ -536,7 +479,6 @@ def excluir_cadastro_medico():
         flash('Erro ao conectar ao banco de dados.')
         return redirect('/pag_medico')
 
-
 @app.route('/atualizar_cadastro_medico', methods=['GET', 'POST'])
 def atualizar_cadastro_medico():
     if 'crm' not in session:
@@ -560,7 +502,6 @@ def atualizar_cadastro_medico():
             else:
                 flash('Médico não encontrado.')
                 return redirect('/pag_medico')
-
     # Se for uma requisição POST, processa a atualização
     if request.method == 'POST':
         nome = request.form.get('nome')
@@ -568,7 +509,6 @@ def atualizar_cadastro_medico():
         idade = request.form.get('idade')
         status = request.form.get('status')
         senha = request.form.get('senha')
-
         # Validação de campos obrigatórios
         if not nome or not email or not idade or not status or not senha:
             flash('Todos os campos são obrigatórios')
@@ -610,13 +550,11 @@ def alterar_disponibilidade():
         if conexao_bd.is_connected():
             try:
                 cursor = conexao_bd.cursor()
-
                 # Capture os dados do formulário
                 crm = request.form.get('crm')
                 dataDisponibilidade = request.form.get('dataDisponibilidade')
                 hora_inicio = request.form.get('hora_inicio')
                 hora_fim = request.form.get('hora_fim')
-
                 # Primeiro, busque o ID do médico pelo CRM
                 cursor.execute('SELECT idMedicos FROM medicos WHERE crmMedicos = %s', (crm,))
                 idMedico = cursor.fetchone()
@@ -627,9 +565,7 @@ def alterar_disponibilidade():
                         INSERT INTO disponibilidade_medicos (idMedico, dataDisponibilidade, hora_inicio, hora_fim) 
                         VALUES (%s, %s, %s, %s)
                     ''', (idMedico[0], dataDisponibilidade, hora_inicio, hora_fim))
-
                     conexao_bd.commit()
-
                     flash('Disponibilidade alterada com sucesso.')
                     return redirect('/pag_medico')  # Redireciona após sucesso
                 else:
@@ -649,13 +585,71 @@ def alterar_disponibilidade():
         else:
             flash('Erro ao conectar ao banco de dados.')
             return redirect('/pag_medico')  # Retorna em caso de falha de conexão
-
     # Caso o método seja GET, renderize o formulário de disponibilidade
     elif request.method == 'GET':
         crm = request.args.get('crm')
         return render_template('alterar_disponibilidade.html', crm=crm)
 
+@app.route('/agendar_consulta', methods=['POST'])
+def agendar_consulta():
+    if 'crm' not in session:
+        flash('Por favor, faça login primeiro.')
+        return redirect('/login_usuario')
+    # Obtém os dados do formulário
+    id_disponibilidade = request.form.get('idDisponibilidade')
+    usuario_logado = session.get('usuario')  # Obtém o ID do usuário logado
+    # Conecta ao banco de dados MySQL
+    conexao_bd = mysql.connector.connect(
+        host='localhost',
+        database='consulta_net',
+        user='root',
+        password='gcc272'
+    )
+    if conexao_bd.is_connected():
+        try:
+            cursor = conexao_bd.cursor()
+            # Busca os detalhes da disponibilidade escolhida
+            cursor.execute('''
+                SELECT idMedico, dataDisponibilidade, hora_inicio, hora_fim
+                FROM disponibilidade_medicos
+                WHERE idDisponibilidade = %s
+            ''', (id_disponibilidade,))
+            disponibilidade = cursor.fetchone()
 
+            if disponibilidade:
+                id_medico = disponibilidade[0]
+                data_disponibilidade = disponibilidade[1]
+                hora_inicio = disponibilidade[2]
+                hora_fim = disponibilidade[3]
+                # Insere o agendamento na tabela de agendamentos
+                cursor.execute('''
+                    INSERT INTO agendamentos (idUsuario, idMedico, idDisponibilidade, dataConsulta, hora_inicio, hora_fim)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                ''', (usuario_logado, id_medico, id_disponibilidade, data_disponibilidade, hora_inicio, hora_fim))
+
+                conexao_bd.commit()
+
+                flash('Consulta agendada com sucesso!')
+                return redirect('/usuario_dashboard')  # Redireciona para o painel do usuário
+
+            else:
+                flash('Disponibilidade não encontrada.')
+                return redirect('/tela_medico')
+
+        except mysql.connector.Error as err:
+            flash(f'Erro ao agendar consulta: {err}')
+            return redirect('/tela_medico')
+
+        finally:
+            if cursor:
+                cursor.close()
+            if conexao_bd:
+                conexao_bd.close()
+
+    else:
+        flash('Erro ao conectar ao banco de dados.')
+        return redirect('/tela_medico')
+    
 #inicia Flask
 if __name__ == "__main__":
     app.run(debug=True)
