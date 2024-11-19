@@ -622,9 +622,9 @@ def alterar_disponibilidade():
 @app.route('/agendar_consulta', methods=['POST'])
 def agendar_consulta():
     id_disponibilidade = request.form.get('idDisponibilidade')
-    hora_inicio = request.form.get('hora_inicio')
-    hora_fim = request.form.get('hora_fim')
-    usuario_logado = session.get('email')
+    hora_inicio = request.form.get('hora_inicio')  # Bloco selecionado
+    hora_fim = request.form.get('hora_fim')  # Bloco selecionado
+    usuario_logado = session.get('email')  # Obtém o e-mail do usuário logado
 
     if not usuario_logado:
         flash("Por favor, faça login primeiro.")
@@ -634,38 +634,39 @@ def agendar_consulta():
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
+
+            # Busca o ID do usuário logado
             cursor.execute('SELECT idUsuario FROM usuario WHERE emailUsuario = %s', (usuario_logado,))
             id_usuario = cursor.fetchone()[0]
 
+            # Verifica se o horário já foi reservado (confirmação extra)
             cursor.execute('''
-                SELECT idMedico, dataDisponibilidade
-                FROM disponibilidade_medicos
-                WHERE idDisponibilidade = %s
-            ''', (id_disponibilidade,))
-            disponibilidade = cursor.fetchone()
+                SELECT COUNT(*) FROM agendamentos
+                WHERE idDisponibilidade = %s AND hora_inicio = %s AND hora_fim = %s
+            ''', (id_disponibilidade, hora_inicio, hora_fim))
+            ja_reservado = cursor.fetchone()[0]
 
-            if disponibilidade:
-                id_medico, data_consulta = disponibilidade
-                cursor.execute('''
-                    INSERT INTO agendamentos (idUsuario, idMedico, idDisponibilidade, dataConsulta, hora_inicio, hora_fim)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                ''', (id_usuario, id_medico, id_disponibilidade, data_consulta, hora_inicio, hora_fim))
-
-                conexao_bd.commit()
-                flash("Consulta agendada com sucesso!")
+            if ja_reservado > 0:
+                flash("Este horário já foi agendado.")
                 return redirect('/tela_usuario')
-            else:
-                flash("Disponibilidade não encontrada.")
-                return redirect('/tela_medico')
+
+            # Insere o agendamento para o bloco selecionado
+            cursor.execute('''
+                INSERT INTO agendamentos (idUsuario, idMedico, idDisponibilidade, dataConsulta, hora_inicio, hora_fim)
+                SELECT %s, d.idMedico, d.idDisponibilidade, d.dataDisponibilidade, %s, %s
+                FROM disponibilidade_medicos d
+                WHERE d.idDisponibilidade = %s
+            ''', (id_usuario, hora_inicio, hora_fim, id_disponibilidade))
+
+            conexao_bd.commit()
+            flash("Consulta agendada com sucesso!")
+            return redirect('/tela_usuario')
         except mysql.connector.Error as err:
             flash(f"Erro ao agendar consulta: {err}")
-            return redirect('/tela_medico')
+            return redirect('/tela_usuario')
         finally:
             cursor.close()
             conexao_bd.close()
-    else:
-        flash("Erro ao conectar ao banco de dados.")
-        return redirect('/')
 
 @app.route('/consultar_agendamentos', methods=['GET'])
 def consultar_agendamentos():
@@ -707,17 +708,17 @@ def disponibilidades(id_medico):
             cursor = conexao_bd.cursor()
             cursor.execute('''
                 SELECT d.idDisponibilidade, DATE_FORMAT(d.dataDisponibilidade, '%d/%m/%Y') AS dataFormatada, 
-                       TIME_FORMAT(d.hora_inicio, '%H:%i'), TIME_FORMAT(d.hora_fim, '%H:%i')
+                       TIME_FORMAT(d.hora_inicio, '%H:%i') AS horaInicio, 
+                       TIME_FORMAT(d.hora_fim, '%H:%i') AS horaFim, d.idMedico
                 FROM disponibilidade_medicos d
-                LEFT JOIN agendamentos a ON d.idDisponibilidade = a.idDisponibilidade
-                WHERE d.idMedico = %s AND d.dataDisponibilidade >= CURDATE() AND a.idAgendamento IS NULL
+                WHERE d.idMedico = %s AND d.dataDisponibilidade >= CURDATE()
             ''', (id_medico,))
             disponibilidades = cursor.fetchall()
 
             # Dividir horários em blocos de 30 minutos
             blocos = []
             for disp in disponibilidades:
-                id_disponibilidade, data_disponibilidade, hora_inicio, hora_fim = disp
+                id_disponibilidade, data_disponibilidade, hora_inicio, hora_fim, id_medico = disp
                 hora_inicio = datetime.strptime(hora_inicio, '%H:%M')
                 hora_fim = datetime.strptime(hora_fim, '%H:%M')
                 while hora_inicio < hora_fim:
@@ -725,12 +726,13 @@ def disponibilidades(id_medico):
                     bloco_fim = bloco_inicio + timedelta(minutes=30)
                     if bloco_fim > hora_fim:
                         bloco_fim = hora_fim
-                    blocos.append((
-                        id_disponibilidade,
-                        data_disponibilidade,
-                        bloco_inicio.strftime('%H:%M'),
-                        bloco_fim.strftime('%H:%M')
-                    ))
+                    blocos.append({
+                        "idDisponibilidade": id_disponibilidade,
+                        "dataDisponibilidade": data_disponibilidade,
+                        "hora_inicio": bloco_inicio.strftime('%H:%M'),
+                        "hora_fim": bloco_fim.strftime('%H:%M'),
+                        "idMedico": id_medico,
+                    })
                     hora_inicio = bloco_fim
 
             cursor.close()
