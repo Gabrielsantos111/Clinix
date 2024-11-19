@@ -706,12 +706,15 @@ def disponibilidades(id_medico):
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
+
+            # Consulta SQL para excluir horários já reservados
             cursor.execute('''
                 SELECT d.idDisponibilidade, DATE_FORMAT(d.dataDisponibilidade, '%d/%m/%Y') AS dataFormatada, 
                        TIME_FORMAT(d.hora_inicio, '%H:%i') AS horaInicio, 
                        TIME_FORMAT(d.hora_fim, '%H:%i') AS horaFim, d.idMedico
                 FROM disponibilidade_medicos d
-                WHERE d.idMedico = %s AND d.dataDisponibilidade >= CURDATE()
+                LEFT JOIN agendamentos a ON d.idDisponibilidade = a.idDisponibilidade
+                WHERE d.idMedico = %s AND d.dataDisponibilidade >= CURDATE() AND a.idAgendamento IS NULL
             ''', (id_medico,))
             disponibilidades = cursor.fetchall()
 
