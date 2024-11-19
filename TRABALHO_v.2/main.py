@@ -752,7 +752,7 @@ def calendario_medico(id_medico):
         try:
             cursor = conexao_bd.cursor()
             cursor.execute('''
-                SELECT d.dataDisponibilidade, d.hora_inicio, d.hora_fim, u.nomeUsuario, a.idAgendamento
+                SELECT DATE_FORMAT(d.dataDisponibilidade, '%d/%m/%Y') AS dataFormatada, d.hora_inicio, d.hora_fim, u.nomeUsuario, a.idAgendamento
                 FROM disponibilidade_medicos d
                 LEFT JOIN agendamentos a ON d.idDisponibilidade = a.idDisponibilidade
                 LEFT JOIN usuario u ON a.idUsuario = u.idUsuario
@@ -782,6 +782,47 @@ def cancelar_consulta():
         except mysql.connector.Error as err:
             flash(f"Erro ao cancelar consulta: {err}")
             return redirect('/pag_medico')
+        finally:
+            cursor.close()
+            conexao_bd.close()
+
+@app.route('/gerenciar_disponibilidades/<int:id_medico>')
+def gerenciar_disponibilidades(id_medico):
+    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+    if conexao_bd.is_connected():
+        try:
+            cursor = conexao_bd.cursor()
+            # Busca todas as disponibilidades do médico
+            cursor.execute('''
+                SELECT d.idDisponibilidade, DATE_FORMAT(d.dataDisponibilidade, '%d/%m/%Y') AS dataFormatada, 
+                       TIME_FORMAT(d.hora_inicio, '%H:%i') AS horaInicio, TIME_FORMAT(d.hora_fim, '%H:%i') AS horaFim
+                FROM disponibilidade_medicos d
+                WHERE d.idMedico = %s AND d.dataDisponibilidade >= CURDATE()
+            ''', (id_medico,))
+            disponibilidades = cursor.fetchall()
+
+            cursor.close()
+            conexao_bd.close()
+            return render_template('gerenciar_disponibilidades.html', disponibilidades=disponibilidades, id_medico=id_medico)
+        except mysql.connector.Error as err:
+            flash(f"Erro ao carregar as disponibilidades: {err}")
+            return redirect('/pag_medico')
+
+@app.route('/excluir_disponibilidade', methods=['POST'])
+def excluir_disponibilidade():
+    id_disponibilidade = request.form.get('idDisponibilidade')
+    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+    if conexao_bd.is_connected():
+        try:
+            cursor = conexao_bd.cursor()
+            cursor.execute('DELETE FROM disponibilidade_medicos WHERE idDisponibilidade = %s', (id_disponibilidade,))
+            conexao_bd.commit()
+
+            flash("Disponibilidade excluída com sucesso!")
+            return redirect(request.referrer)
+        except mysql.connector.Error as err:
+            flash(f"Erro ao excluir disponibilidade: {err}")
+            return redirect(request.referrer)
         finally:
             cursor.close()
             conexao_bd.close()

@@ -1,0 +1,108 @@
+/* Definições gerais de estilo para todas as páginas */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+}
+
+h2 {
+    text-align: center;
+    color: #333;
+    margin-top: 20px;
+}
+
+button {
+    background-color: #00a99d;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    text-align: center;
+    font-size: 14px;
+    margin: 20px auto;
+    display: block;
+    border-radius: 4px;
+}
+
+button:hover {
+    background-color: #007e75;
+}
+
+/* Estilo da tabela */
+table {
+    width: 90%;
+    margin: 20px auto;
+    border-collapse: collapse;
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+table th, table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+table td form {
+    margin: 0;
+}
+
+table td button {
+    background-color: #ff4040; /* Cor do botão de exclusão */
+    border: none;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 4px;
+}
+
+table td button:hover {
+    background-color: #cc3333;
+}
+
+/* Para os formulários e elementos de ação */
+form {
+    margin: 0;
+    display: inline-block;
+}
+
+/* Estilo dos botões de ação */
+.button-group {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+/* Caixa de conteúdo */
+.container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.box {
+    background-color: white;
+    border: 1px solid #ddd;
+    padding: 20px;
+    margin: 10px;
+    width: 80%; /* Aumentar a largura da tabela para caber o conteúdo */
+    max-width: 900px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.box h2 {
+    font-size: 18px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+}
