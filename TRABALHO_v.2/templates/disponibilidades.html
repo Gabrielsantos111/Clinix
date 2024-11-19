@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disponibilidades</title>
+</head>
+<body>
+    <h2>Horários Disponíveis</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Hora Início</th>
+                <th>Hora Fim</th>
+                <th>Ação</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for disponibilidade in disponibilidades %}
+            <tr>
+                <td>{{ disponibilidade[1] }}</td>
+                <td>{{ disponibilidade[2] }}</td>
+                <td>{{ disponibilidade[3] }}</td>
+                <td>
+                    <form method="POST" action="/agendar_consulta">
+                        <input type="hidden" name="idDisponibilidade" value="{{ disponibilidade[0] }}">
+                        <button type="submit">Agendar</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <button onclick="window.location.href='/tela_medico'">Voltar</button>
+</body>
+</html>

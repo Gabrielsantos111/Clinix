@@ -213,18 +213,27 @@ def reset_senha():
 @app.route('/tela_medico')
 def tela_medico():
     if logado:
-        #conecta ao banco de dados MySQL
         conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
         if conexao_bd.is_connected():
-            cursor = conexao_bd.cursor()
-            cursor.execute('SELECT nomeMedicos, emailMedicos, idadeMedicos, statusMedicos FROM medicos')
-            medicos = cursor.fetchall()
-            cursor.close()
-            conexao_bd.close()
-            return render_template('tela_medico.html', medicos=medicos)
-        else:
-            flash('Erro ao conectar ao banco de dados')
-            return redirect('/')
+            try:
+                cursor = conexao_bd.cursor()
+                cursor.execute('''
+                    SELECT m.nomeMedicos, m.emailMedicos, m.idadeMedicos, m.statusMedicos, GROUP_CONCAT(e.nomeEspecialidade SEPARATOR ', ')
+                    FROM medicos m
+                    JOIN medicos_especialidades me ON m.idMedicos = me.idMedico
+                    JOIN especialidades e ON me.idEspecialidade = e.idEspecialidade
+                    GROUP BY m.idMedicos
+                ''')
+                medicos = cursor.fetchall()
+                cursor.close()
+                conexao_bd.close()
+                return render_template('tela_medico.html', medicos=medicos)
+            except mysql.connector.Error as err:
+                flash(f"Erro ao carregar médicos: {err}")
+                return redirect('/')
+    else:
+        flash('Por favor, faça login primeiro.')
+        return redirect('/')
 
 @app.route('/atualizar_cadastro')
 def atualizar_cadastro():
@@ -592,23 +601,21 @@ def alterar_disponibilidade():
 
 @app.route('/agendar_consulta', methods=['POST'])
 def agendar_consulta():
-    if 'crm' not in session:
-        flash('Por favor, faça login primeiro.')
-        return redirect('/login_usuario')
-    # Obtém os dados do formulário
     id_disponibilidade = request.form.get('idDisponibilidade')
-    usuario_logado = session.get('usuario')  # Obtém o ID do usuário logado
-    # Conecta ao banco de dados MySQL
-    conexao_bd = mysql.connector.connect(
-        host='localhost',
-        database='consulta_net',
-        user='root',
-        password='gcc272'
-    )
+    usuario_logado = session.get('email')  # Obtém o e-mail do usuário logado
+    
+    if not usuario_logado:
+        flash("Por favor, faça login primeiro.")
+        return redirect('/')
+
+    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
-            # Busca os detalhes da disponibilidade escolhida
+            # Busca os IDs necessários
+            cursor.execute('SELECT idUsuario FROM usuario WHERE emailUsuario = %s', (usuario_logado,))
+            id_usuario = cursor.fetchone()[0]
+
             cursor.execute('''
                 SELECT idMedico, dataDisponibilidade, hora_inicio, hora_fim
                 FROM disponibilidade_medicos
@@ -617,38 +624,76 @@ def agendar_consulta():
             disponibilidade = cursor.fetchone()
 
             if disponibilidade:
-                id_medico = disponibilidade[0]
-                data_disponibilidade = disponibilidade[1]
-                hora_inicio = disponibilidade[2]
-                hora_fim = disponibilidade[3]
-                # Insere o agendamento na tabela de agendamentos
+                id_medico, data_consulta, hora_inicio, hora_fim = disponibilidade
+                # Inserção do agendamento
                 cursor.execute('''
                     INSERT INTO agendamentos (idUsuario, idMedico, idDisponibilidade, dataConsulta, hora_inicio, hora_fim)
                     VALUES (%s, %s, %s, %s, %s, %s)
-                ''', (usuario_logado, id_medico, id_disponibilidade, data_disponibilidade, hora_inicio, hora_fim))
+                ''', (id_usuario, id_medico, id_disponibilidade, data_consulta, hora_inicio, hora_fim))
 
                 conexao_bd.commit()
-
-                flash('Consulta agendada com sucesso!')
-                return redirect('/usuario_dashboard')  # Redireciona para o painel do usuário
-
+                flash("Consulta agendada com sucesso!")
+                return redirect('/tela_usuario')
             else:
-                flash('Disponibilidade não encontrada.')
-                return redirect('/tela_medico')
-
+                flash("Disponibilidade não encontrada.")
+                return redirect('/')
         except mysql.connector.Error as err:
-            flash(f'Erro ao agendar consulta: {err}')
-            return redirect('/tela_medico')
-
+            flash(f"Erro ao agendar consulta: {err}")
+            return redirect('/')
         finally:
-            if cursor:
-                cursor.close()
-            if conexao_bd:
-                conexao_bd.close()
-
+            cursor.close()
+            conexao_bd.close()
     else:
-        flash('Erro ao conectar ao banco de dados.')
-        return redirect('/tela_medico')
+        flash("Erro ao conectar ao banco de dados.")
+        return redirect('/')
+
+@app.route('/consultar_agendamentos', methods=['GET'])
+def consultar_agendamentos():
+    if 'usuario' not in session:
+        flash('Por favor, faça login primeiro.')
+        return redirect('/login')
+    
+    id_usuario = session.get('usuario')
+    conexao_bd = mysql.connector.connect(
+        host='localhost',
+        database='consulta_net',
+        user='root',
+        password='gcc272'
+    )
+
+    if conexao_bd.is_connected():
+        try:
+            cursor = conexao_bd.cursor()
+            cursor.execute('''
+                SELECT a.idAgendamento, m.nomeMedicos, a.dataConsulta, a.hora_inicio, a.hora_fim
+                FROM agendamentos a
+                JOIN medicos m ON a.idMedico = m.idMedicos
+                WHERE a.idUsuario = %s
+                ORDER BY a.dataConsulta, a.hora_inicio
+            ''', (id_usuario,))
+            agendamentos = cursor.fetchall()
+            return render_template('consultar_agendamentos.html', agendamentos=agendamentos)
+        except mysql.connector.Error as err:
+            flash(f'Erro ao consultar agendamentos: {err}')
+
+@app.route('/disponibilidades/<int:id_medico>')
+def disponibilidades(id_medico):
+    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+    if conexao_bd.is_connected():
+        try:
+            cursor = conexao_bd.cursor()
+            cursor.execute('''
+                SELECT idDisponibilidade, dataDisponibilidade, hora_inicio, hora_fim
+                FROM disponibilidade_medicos
+                WHERE idMedico = %s AND dataDisponibilidade >= CURDATE()
+            ''', (id_medico,))
+            disponibilidades = cursor.fetchall()
+            cursor.close()
+            conexao_bd.close()
+            return render_template('disponibilidades.html', disponibilidades=disponibilidades, id_medico=id_medico)
+        except mysql.connector.Error as err:
+            flash(f"Erro ao buscar disponibilidades: {err}")
+            return redirect('/tela_medico')
     
 #inicia Flask
 if __name__ == "__main__":
