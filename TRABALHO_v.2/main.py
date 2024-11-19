@@ -13,6 +13,19 @@ app.config['SECRET_KEY'] = 'gabdan2004'
 #variável global para verificar se o usuário está logado
 logado = False
 
+from datetime import datetime
+
+@app.template_filter('datetimeformat')
+def datetimeformat(value):
+    """
+    Formata uma data no formato DD/MM/AAAA.
+    """
+    try:
+        return datetime.strptime(value, '%Y-%m-%d').strftime('%d/%m/%Y')
+    except Exception as e:
+        return value
+
+
 #função senha aleatória
 def gerar_senha_aleatoria(tamanho=8):
     caracteres = string.ascii_letters + string.digits
@@ -602,8 +615,10 @@ def alterar_disponibilidade():
 @app.route('/agendar_consulta', methods=['POST'])
 def agendar_consulta():
     id_disponibilidade = request.form.get('idDisponibilidade')
-    usuario_logado = session.get('email')  # Obtém o e-mail do usuário logado
-    
+    hora_inicio = request.form.get('hora_inicio')
+    hora_fim = request.form.get('hora_fim')
+    usuario_logado = session.get('email')
+
     if not usuario_logado:
         flash("Por favor, faça login primeiro.")
         return redirect('/')
@@ -612,20 +627,18 @@ def agendar_consulta():
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
-            # Busca os IDs necessários
             cursor.execute('SELECT idUsuario FROM usuario WHERE emailUsuario = %s', (usuario_logado,))
             id_usuario = cursor.fetchone()[0]
 
             cursor.execute('''
-                SELECT idMedico, dataDisponibilidade, hora_inicio, hora_fim
+                SELECT idMedico, dataDisponibilidade
                 FROM disponibilidade_medicos
                 WHERE idDisponibilidade = %s
             ''', (id_disponibilidade,))
             disponibilidade = cursor.fetchone()
 
             if disponibilidade:
-                id_medico, data_consulta, hora_inicio, hora_fim = disponibilidade
-                # Inserção do agendamento
+                id_medico, data_consulta = disponibilidade
                 cursor.execute('''
                     INSERT INTO agendamentos (idUsuario, idMedico, idDisponibilidade, dataConsulta, hora_inicio, hora_fim)
                     VALUES (%s, %s, %s, %s, %s, %s)
@@ -636,10 +649,10 @@ def agendar_consulta():
                 return redirect('/tela_usuario')
             else:
                 flash("Disponibilidade não encontrada.")
-                return redirect('/')
+                return redirect('/tela_medico')
         except mysql.connector.Error as err:
             flash(f"Erro ao agendar consulta: {err}")
-            return redirect('/')
+            return redirect('/tela_medico')
         finally:
             cursor.close()
             conexao_bd.close()
@@ -676,25 +689,48 @@ def consultar_agendamentos():
         except mysql.connector.Error as err:
             flash(f'Erro ao consultar agendamentos: {err}')
 
+from datetime import timedelta
+
 @app.route('/disponibilidades/<int:id_medico>')
 def disponibilidades(id_medico):
     conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+    from datetime import datetime
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
             cursor.execute('''
-                SELECT idDisponibilidade, dataDisponibilidade, hora_inicio, hora_fim
+                SELECT idDisponibilidade, dataDisponibilidade, TIME_FORMAT(hora_inicio, '%H:%i'), TIME_FORMAT(hora_fim, '%H:%i')
                 FROM disponibilidade_medicos
                 WHERE idMedico = %s AND dataDisponibilidade >= CURDATE()
             ''', (id_medico,))
             disponibilidades = cursor.fetchall()
+
+            # Dividir horários em blocos de 30 minutos
+            blocos = []
+            for disp in disponibilidades:
+                id_disponibilidade, data_disponibilidade, hora_inicio, hora_fim = disp
+                hora_inicio = datetime.strptime(hora_inicio, '%H:%M')
+                hora_fim = datetime.strptime(hora_fim, '%H:%M')
+                while hora_inicio < hora_fim:
+                    bloco_inicio = hora_inicio
+                    bloco_fim = bloco_inicio + timedelta(minutes=30)
+                    if bloco_fim > hora_fim:
+                        bloco_fim = hora_fim
+                    blocos.append((
+                        id_disponibilidade,
+                        data_disponibilidade,
+                        bloco_inicio.strftime('%H:%M'),  # Garante que bloco_inicio seja string
+                        bloco_fim.strftime('%H:%M')  # Garante que bloco_fim seja string
+                    ))
+                    hora_inicio = bloco_fim
+
             cursor.close()
             conexao_bd.close()
-            return render_template('disponibilidades.html', disponibilidades=disponibilidades, id_medico=id_medico)
+            return render_template('disponibilidades.html', disponibilidades=blocos, id_medico=id_medico)
         except mysql.connector.Error as err:
             flash(f"Erro ao buscar disponibilidades: {err}")
             return redirect('/tela_medico')
-    
+
 #inicia Flask
 if __name__ == "__main__":
     app.run(debug=True)

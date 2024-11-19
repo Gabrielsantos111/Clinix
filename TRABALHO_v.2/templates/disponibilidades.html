@@ -19,12 +19,14 @@
         <tbody>
             {% for disponibilidade in disponibilidades %}
             <tr>
-                <td>{{ disponibilidade[1] }}</td>
+                <td>{{ disponibilidade[1] | datetimeformat }}</td>
                 <td>{{ disponibilidade[2] }}</td>
                 <td>{{ disponibilidade[3] }}</td>
                 <td>
                     <form method="POST" action="/agendar_consulta">
                         <input type="hidden" name="idDisponibilidade" value="{{ disponibilidade[0] }}">
+                        <input type="hidden" name="hora_inicio" value="{{ disponibilidade[2] }}">
+                        <input type="hidden" name="hora_fim" value="{{ disponibilidade[3] }}">
                         <button type="submit">Agendar</button>
                     </form>
                 </td>
