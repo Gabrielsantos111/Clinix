@@ -52,6 +52,7 @@
                         <button type="submit" class="btn-secondary">Excluir Cadastro</button>
                     </form>
                     <button onclick="window.location.href='/alterar_disponibilidade?crm={{ medico_info[0][4] }}'" class="btn">Alterar Disponibilidade</button>
+                    <button onclick="window.location.href='/calendario_medico/{{ id_medico }}'">Ver Calendário</button>
                 </div>
             {% else %}
                 <p>Informações não encontradas.</p>

@@ -339,9 +339,16 @@ def pag_medico():
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
+
+            # Seleciona o ID do médico logado
+            cursor.execute('SELECT idMedicos FROM medicos WHERE crmMedicos = %s', (crm_logado,))
+            id_medico = cursor.fetchone()[0]  # Obtém o ID do médico
+
             # Seleciona os dados do médico logado
             cursor.execute('''
-                SELECT m.nomeMedicos, m.emailMedicos, m.idadeMedicos, m.statusMedicos, m.crmMedicos, e.nomeEspecialidade, DATE_FORMAT(d.dataDisponibilidade, '%d/%m/%Y') AS dataFormatada, d.hora_inicio, d.hora_fim
+                SELECT m.nomeMedicos, m.emailMedicos, m.idadeMedicos, m.statusMedicos, m.crmMedicos, 
+                       e.nomeEspecialidade, DATE_FORMAT(d.dataDisponibilidade, '%d/%m/%Y') AS dataFormatada, 
+                       TIME_FORMAT(d.hora_inicio, '%H:%i'), TIME_FORMAT(d.hora_fim, '%H:%i')
                 FROM medicos m
                 JOIN medicos_especialidades me ON m.idMedicos = me.idMedico
                 JOIN especialidades e ON me.idEspecialidade = e.idEspecialidade
@@ -354,8 +361,8 @@ def pag_medico():
             cursor.close()
             conexao_bd.close()
             if medico_info:
-                # Renderiza a página com as informações do médico
-                return render_template('pag_medico.html', medico_info=medico_info)
+                # Renderiza a página com as informações do médico e seu ID
+                return render_template('pag_medico.html', medico_info=medico_info, id_medico=id_medico)
             else:
                 flash('Médico não encontrado.')
                 return redirect('/login_medico')
@@ -694,14 +701,16 @@ from datetime import timedelta
 @app.route('/disponibilidades/<int:id_medico>')
 def disponibilidades(id_medico):
     conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
-    from datetime import datetime
+    from datetime import datetime, timedelta
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
             cursor.execute('''
-                SELECT idDisponibilidade, DATE_FORMAT(dataDisponibilidade, '%d/%m/%Y') AS dataFormatada, TIME_FORMAT(hora_inicio, '%H:%i'), TIME_FORMAT(hora_fim, '%H:%i')
-                FROM disponibilidade_medicos
-                WHERE idMedico = %s AND dataDisponibilidade >= CURDATE()
+                SELECT d.idDisponibilidade, DATE_FORMAT(d.dataDisponibilidade, '%d/%m/%Y') AS dataFormatada, 
+                       TIME_FORMAT(d.hora_inicio, '%H:%i'), TIME_FORMAT(d.hora_fim, '%H:%i')
+                FROM disponibilidade_medicos d
+                LEFT JOIN agendamentos a ON d.idDisponibilidade = a.idDisponibilidade
+                WHERE d.idMedico = %s AND d.dataDisponibilidade >= CURDATE() AND a.idAgendamento IS NULL
             ''', (id_medico,))
             disponibilidades = cursor.fetchall()
 
@@ -719,8 +728,8 @@ def disponibilidades(id_medico):
                     blocos.append((
                         id_disponibilidade,
                         data_disponibilidade,
-                        bloco_inicio.strftime('%H:%M'),  # Garante que bloco_inicio seja string
-                        bloco_fim.strftime('%H:%M')  # Garante que bloco_fim seja string
+                        bloco_inicio.strftime('%H:%M'),
+                        bloco_fim.strftime('%H:%M')
                     ))
                     hora_inicio = bloco_fim
 
@@ -730,6 +739,47 @@ def disponibilidades(id_medico):
         except mysql.connector.Error as err:
             flash(f"Erro ao buscar disponibilidades: {err}")
             return redirect('/tela_medico')
+        
+@app.route('/calendario_medico/<int:id_medico>')
+def calendario_medico(id_medico):
+    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+    if conexao_bd.is_connected():
+        try:
+            cursor = conexao_bd.cursor()
+            cursor.execute('''
+                SELECT d.dataDisponibilidade, d.hora_inicio, d.hora_fim, u.nomeUsuario, a.idAgendamento
+                FROM disponibilidade_medicos d
+                LEFT JOIN agendamentos a ON d.idDisponibilidade = a.idDisponibilidade
+                LEFT JOIN usuario u ON a.idUsuario = u.idUsuario
+                WHERE d.idMedico = %s
+            ''', (id_medico,))
+            consultas = cursor.fetchall()
+
+            cursor.close()
+            conexao_bd.close()
+            return render_template('calendario_medico.html', consultas=consultas, id_medico=id_medico)
+        except mysql.connector.Error as err:
+            flash(f"Erro ao carregar o calendário: {err}")
+            return redirect('/pag_medico')
+
+@app.route('/cancelar_consulta', methods=['POST'])
+def cancelar_consulta():
+    id_agendamento = request.form.get('idAgendamento')
+    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+    if conexao_bd.is_connected():
+        try:
+            cursor = conexao_bd.cursor()
+            cursor.execute('DELETE FROM agendamentos WHERE idAgendamento = %s', (id_agendamento,))
+            conexao_bd.commit()
+
+            flash("Consulta cancelada com sucesso!")
+            return redirect('/pag_medico')
+        except mysql.connector.Error as err:
+            flash(f"Erro ao cancelar consulta: {err}")
+            return redirect('/pag_medico')
+        finally:
+            cursor.close()
+            conexao_bd.close()
 
 #inicia Flask
 if __name__ == "__main__":
