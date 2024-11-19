@@ -341,7 +341,7 @@ def pag_medico():
             cursor = conexao_bd.cursor()
             # Seleciona os dados do médico logado
             cursor.execute('''
-                SELECT m.nomeMedicos, m.emailMedicos, m.idadeMedicos, m.statusMedicos, m.crmMedicos, e.nomeEspecialidade, d.dataDisponibilidade, d.hora_inicio, d.hora_fim
+                SELECT m.nomeMedicos, m.emailMedicos, m.idadeMedicos, m.statusMedicos, m.crmMedicos, e.nomeEspecialidade, DATE_FORMAT(d.dataDisponibilidade, '%d/%m/%Y') AS dataFormatada, d.hora_inicio, d.hora_fim
                 FROM medicos m
                 JOIN medicos_especialidades me ON m.idMedicos = me.idMedico
                 JOIN especialidades e ON me.idEspecialidade = e.idEspecialidade
@@ -699,7 +699,7 @@ def disponibilidades(id_medico):
         try:
             cursor = conexao_bd.cursor()
             cursor.execute('''
-                SELECT idDisponibilidade, dataDisponibilidade, TIME_FORMAT(hora_inicio, '%H:%i'), TIME_FORMAT(hora_fim, '%H:%i')
+                SELECT idDisponibilidade, DATE_FORMAT(dataDisponibilidade, '%d/%m/%Y') AS dataFormatada, TIME_FORMAT(hora_inicio, '%H:%i'), TIME_FORMAT(hora_fim, '%H:%i')
                 FROM disponibilidade_medicos
                 WHERE idMedico = %s AND dataDisponibilidade >= CURDATE()
             ''', (id_medico,))
