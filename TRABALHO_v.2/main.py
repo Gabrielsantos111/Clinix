@@ -5,10 +5,22 @@ import os
 import mysql.connector
 import random
 import string
+from flask_mail import Mail, Message
 
 #inicia Flask
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'gabdan2004'
+
+# Configurações de e-mail
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'  # Servidor SMTP (Gmail, por exemplo)
+app.config['MAIL_PORT'] = 587  # Porta para envio seguro
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'clinix.projeto@gmail.com'  # Seu e-mail
+app.config['MAIL_PASSWORD'] = 'adrszlubvsgzwivr '  # Sua senha ou app password
+app.config['MAIL_DEFAULT_SENDER'] = ('Consulta Online', 'clinix.projeto@gmail.com')
+
+# Inicializar Flask-Mail
+mail = Mail(app)
 
 #variável global para verificar se o usuário está logado
 logado = False
@@ -658,8 +670,36 @@ def agendar_consulta():
                 WHERE d.idDisponibilidade = %s
             ''', (id_usuario, hora_inicio, hora_fim, id_disponibilidade))
 
+            # Busca informações do agendamento para o e-mail
+            cursor.execute('''
+                SELECT d.dataDisponibilidade, %s, %s, m.nomeMedicos
+                FROM disponibilidade_medicos d
+                JOIN medicos m ON d.idMedico = m.idMedicos
+                WHERE d.idDisponibilidade = %s
+            ''', (hora_inicio, hora_fim, id_disponibilidade))
+            consulta_info = cursor.fetchone()
+
+            data_consulta, hora_inicio, hora_fim, nome_medico = consulta_info
+
             conexao_bd.commit()
-            flash("Consulta agendada com sucesso!")
+
+            # Enviar o e-mail de confirmação
+            msg = Message("Confirmação de Agendamento", recipients=[usuario_logado])
+            msg.body = f'''
+            Olá,
+
+            Sua consulta foi agendada com sucesso!
+            
+            Detalhes da consulta:
+            - Médico: {nome_medico}
+            - Data: {data_consulta}
+            - Horário: {hora_inicio} - {hora_fim}
+
+            Obrigado por usar nosso serviço!
+            '''
+            mail.send(msg)
+
+            flash("Consulta agendada com sucesso! E-mail enviado.")
             return redirect('/tela_usuario')
         except mysql.connector.Error as err:
             flash(f"Erro ao agendar consulta: {err}")
