@@ -38,13 +38,6 @@ def datetimeformat(value):
     except Exception as e:
         return value
 
-
-#função senha aleatória
-def gerar_senha_aleatoria(tamanho=8):
-    caracteres = string.ascii_letters + string.digits
-    senha = ''.join(random.choice(caracteres) for i in range(tamanho))
-    return senha
-
 #função para obter informações do usuário
 def obter_informacoes_usuario(email):
     #Conecta ao banco de dados MySQL
@@ -117,43 +110,53 @@ def tela_usuario():
     else:
         return redirect('/')
 
-#rota login
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     global logado
 
-    email = request.form.get('email')
-    senha = request.form.get('senha')
+    if request.method == 'GET':
+        # Renderiza a página de login no método GET
+        return render_template('login.html')
 
-    #conecta banco de dados MySQL
-    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
-    cont = 0
-    if conexao_bd.is_connected():
-        print('conectado')
-        cursor = conexao_bd.cursor()  #cria um cursor para executar comandos SQL
-        cursor.execute('SELECT * FROM usuario;')
-        usuariosBD = cursor.fetchall()  #obtém todos os usuários do banco de dados
+    if request.method == 'POST':
+        email = request.form.get('email')
+        senha = request.form.get('senha')
 
-        for usuario in usuariosBD:
-            cont += 1
-            usuarioNome = str(usuario[1])
-            usuarioSenha = str(usuario[2])
+        # Conecta ao banco de dados MySQL
+        conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+        if conexao_bd.is_connected():
+            try:
+                cursor = conexao_bd.cursor()
+                cursor.execute('SELECT emailUsuario, senhaUsuario FROM usuario')
+                usuariosBD = cursor.fetchall()
 
-            if email == 'adm' and senha == '000':  #administrador
-                logado = True
-                session['email'] = email
-                return redirect("/adm")
-            
-            if usuarioNome == email and usuarioSenha == senha:  #verifica se dados são válidas
-                logado = True
-                session['email'] = email
-                return redirect('/tela_usuario')
-            
-            if cont >= len(usuariosBD):
-                flash('USUARIO INVALIDO')
-                return redirect("/")
-    else:
-        return redirect('/')  #redireciona para a página inicial se não conseguir conectar ao banco de dados
+                # Verifica credenciais
+                for usuario in usuariosBD:
+                    usuarioNome, usuarioSenha = usuario
+
+                    # Verifica se é o administrador
+                    if email == 'adm' and senha == '000':
+                        logado = True
+                        session['email'] = email
+                        return redirect("/adm")
+
+                    # Verifica se o e-mail e a senha do usuário são válidos
+                    if usuarioNome == email and usuarioSenha == senha:
+                        logado = True
+                        session['email'] = email
+                        return redirect('/tela_usuario')
+
+                flash('Usuário ou senha inválidos')
+                return redirect('/login')  # Retorna à página de login com mensagem de erro
+            except mysql.connector.Error as err:
+                flash(f"Erro ao acessar banco de dados: {err}")
+                return redirect('/login')
+            finally:
+                cursor.close()
+                conexao_bd.close()
+
+        flash("Erro ao conectar ao banco de dados")
+        return redirect('/login')
 
 #rota cadastro
 @app.route('/cadastrarUsuario', methods=['POST'])
@@ -212,29 +215,86 @@ def cadastro():
     return render_template('cadastro.html')
 
 #rota página esqueci senha
-@app.route('/esqueci_senha')
+@app.route('/esqueci_senha', methods=['GET', 'POST'])
 def esqueci_senha():
-    return render_template('esqueci_senha.html')
-
-#rota resetar senha
-@app.route('/reset_senha', methods=['POST'])
-def reset_senha():
-    email = request.form.get('email')  #obtém email do formulário
-
-    #conecta ao banco de dados MySQL
+    if request.method == 'GET':
+        return render_template('esqueci_senha.html')
+    # Processar lógica de redefinição no método POST
+    email_usuario = request.form.get('email')
     conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
     if conexao_bd.is_connected():
-        cursor = conexao_bd.cursor()
-        nova_senha = gerar_senha_aleatoria()  #gera uma nova senha aleatória
-        cursor.execute('UPDATE usuario SET senhaUsuario = %s WHERE emailUsuario = %s', (nova_senha, email))
-        conexao_bd.commit()
-        cursor.close()
-        conexao_bd.close()
-        flash(f'Nova senha enviada para {email}')
-    else:
-        flash('Erro ao conectar ao banco de dados')
+        try:
+            cursor = conexao_bd.cursor()
 
-    return redirect('/')
+            # Verifica se o e-mail existe no banco de dados
+            cursor.execute('SELECT idUsuario FROM usuario WHERE emailUsuario = %s', (email_usuario,))
+            usuario = cursor.fetchone()
+
+            if not usuario:
+                flash("E-mail não encontrado.")
+                return redirect('/login')
+
+            id_usuario = usuario[0]
+
+            # Gera um token único para redefinir senha
+            from itsdangerous import URLSafeTimedSerializer
+            s = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+            token = s.dumps(email_usuario, salt='redefinir-senha')
+
+            # Envia o e-mail com o link de redefinição
+            link = f"http://127.0.0.1:5000/redefinir_senha/{token}"
+            msg = Message("Redefinição de Senha", recipients=[email_usuario])
+            msg.body = f'''
+            Olá,
+
+            Você solicitou a redefinição de sua senha. Clique no link abaixo para redefinir:
+
+            {link}
+
+            Se você não fez esta solicitação, ignore este e-mail.
+            '''
+            mail.send(msg)
+
+            flash("E-mail de redefinição de senha enviado.")
+            return redirect('/login')
+        except mysql.connector.Error as err:
+            flash(f"Erro ao processar solicitação: {err}")
+            return redirect('/login')
+        finally:
+            cursor.close()
+            conexao_bd.close()
+
+#rota resetar senha
+@app.route('/redefinir_senha/<token>', methods=['GET', 'POST'])
+def redefinir_senha(token):
+    from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadData
+    s = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
+    try:
+        email_usuario = s.loads(token, salt='redefinir-senha', max_age=3600)  # 1 hora de validade
+    except (SignatureExpired, BadData):
+        flash("O link de redefinição expirou ou é inválido.")
+        return redirect('/login')
+
+    if request.method == 'POST':
+        nova_senha = request.form.get('nova_senha')
+        conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+        if conexao_bd.is_connected():
+            try:
+                cursor = conexao_bd.cursor()
+                cursor.execute('UPDATE usuario SET senhaUsuario = %s WHERE emailUsuario = %s', (nova_senha, email_usuario))
+                conexao_bd.commit()
+
+                flash("Senha redefinida com sucesso!")
+                return redirect('/login')
+            except mysql.connector.Error as err:
+                flash(f"Erro ao redefinir senha: {err}")
+                return redirect('/login')
+            finally:
+                cursor.close()
+                conexao_bd.close()
+
+    return render_template('redefinir_senha.html', email=email_usuario)
 
 @app.route('/tela_medico')
 def tela_medico():
@@ -816,14 +876,54 @@ def cancelar_consulta():
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
+
+            # Busca informações do agendamento antes de excluí-lo
+            cursor.execute('''
+                SELECT u.emailUsuario, d.dataDisponibilidade, a.hora_inicio, a.hora_fim, m.nomeMedicos, m.idMedicos
+                FROM agendamentos a
+                JOIN usuario u ON a.idUsuario = u.idUsuario
+                JOIN disponibilidade_medicos d ON a.idDisponibilidade = d.idDisponibilidade
+                JOIN medicos m ON a.idMedico = m.idMedicos
+                WHERE a.idAgendamento = %s
+            ''', (id_agendamento,))
+            agendamento = cursor.fetchone()
+
+            if not agendamento:
+                flash("Agendamento não encontrado.")
+                return redirect('/calendario_medico')
+
+            email_usuario, data_consulta, hora_inicio, hora_fim, nome_medico, id_medico = agendamento
+
+            # Remove o agendamento do banco de dados
             cursor.execute('DELETE FROM agendamentos WHERE idAgendamento = %s', (id_agendamento,))
             conexao_bd.commit()
 
-            flash("Consulta cancelada com sucesso!")
-            return redirect('/pag_medico')
+            # Formata a data para o e-mail
+            data_formatada = data_consulta.strftime('%d/%m/%Y')
+
+            # Envia o e-mail de aviso ao usuário
+            msg = Message("Aviso de Cancelamento de Consulta", recipients=[email_usuario])
+            msg.body = f'''
+            Olá,
+
+            Infelizmente, sua consulta foi cancelada pelo médico.
+
+            Detalhes da consulta cancelada:
+            - Médico: {nome_medico}
+            - Data: {data_formatada}
+            - Horário: {hora_inicio} - {hora_fim}
+
+            Por favor, acesse nosso sistema para reagendar sua consulta.
+
+            Pedimos desculpas pelo transtorno.
+            '''
+            mail.send(msg)
+
+            flash("Consulta cancelada com sucesso! Usuário notificado por e-mail.")
+            return redirect(f'/calendario_medico/{id_medico}')  # Redireciona para o calendário do médico
         except mysql.connector.Error as err:
             flash(f"Erro ao cancelar consulta: {err}")
-            return redirect('/pag_medico')
+            return redirect(f'/calendario_medico/{id_medico}')  # Redireciona em caso de erro
         finally:
             cursor.close()
             conexao_bd.close()
