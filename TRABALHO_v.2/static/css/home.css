@@ -1,93 +1,91 @@
-@charset "UTF-8";
-
-body{
-    background-color: aquamarine;
-    background: url(../imagens/Recepção\ de\ Consultório\ Odontológico.jpg) no-repeat;
-    background-size: 2000px 1000px;
-    background-attachment: fixed;
-    display: block;
+body {
+    font-family: Arial, sans-serif;
+    background: url('../imagens/WhatsApp\ Image\ 2024-11-20\ at\ 14.52.11.jpeg') no-repeat center center fixed;
+    background-size: cover; /* Ajusta a imagem para cobrir toda a tela */
+    margin: 0;
+    padding: 0;
 }
 
-div.flash_alerta{
-    background-color: red;
-    font-size: 50px;
-    border-radius: 30px;
-    font-weight: bold;
-    text-align: center;
-}
-
-div#form_fundo{
-    backdrop-filter: blur(10px);
-    opacity: .9;
-    margin: 10% 25% 25% 25%;
-    text-align: center;
-    border-radius: 20px;
-    font-weight: bold;
-    box-shadow: 2px 5px 5px black;
-}
-
-div#form_frente{
-    background-color: white;
-    margin: 5px;
-    text-align: center;
-    border-radius: 20px;
-    font-weight: bold;
-    box-shadow: 2px 5px 5px black;
-    padding: 30px;
-}
-
-label{
-    font-size: 30px;
-    font-weight: bold;
-    border-radius: 10px;
+.header {
+    background-color: rgba(0, 169, 157, 0.9); /* Fundo translúcido */
+    color: white;
     padding: 20px;
-
+    text-align: center;
+    font-size: 24px;
 }
 
-input{
-    border-radius: 20px;
-    font-size: 30px;
-    font-weight: bold;
-}
-
-input:focus{
-    background-color: white;
-    color: black;
-}
-
-#button_container {
+.container {
     display: flex;
     justify-content: center;
-    gap: 10px; /* Espaçamento entre os botões */
+    margin-top: 20px;
 }
 
-button{
-    font-size: 30px;
+.box {
+    background-color: rgba(255, 255, 255, 0.9); /* Fundo translúcido */
+    border: 1px solid #ddd;
+    padding: 20px;
+    margin: 10px;
+    width: 400px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+
+.box h2 {
+    font-size: 18px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+    text-align: center;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
     font-weight: bold;
-    border-radius: 20px;
-    background-color: black;
-    color: white;
 }
 
-button:hover{
-    background-color: white;
-    color: black;
-    font-size: 40px;
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.btn-primary {
+    background-color: #00a99d;
+    color: white;
+    border: none;
+    padding: 10px 20px;
     cursor: pointer;
-}
-
-button#btn_cadastro, button#btn_esqueceu_senha {
-    font-size: 30px;
-    font-weight: bold;
-    border-radius: 20px;
-    background-color: black;
-    color: white;
+    text-align: center;
+    display: inline-block;
+    text-decoration: none;
+    font-size: 14px;
     margin-top: 10px;
+    margin-right: 5px;
+    border-radius: 5px;
 }
 
-button#btn_cadastro:hover, button#btn_esqueceu_senha:hover {
-    background-color: white;
-    color: black;
-    font-size: 40px;
-    cursor: pointer;
+.btn-primary:hover {
+    background-color: #007f79;
+}
+
+.buttons-container a {
+    color: white;
+    background-color: #333;
+    padding: 10px 15px;
+    margin: 5px;
+    text-decoration: none;
+    border-radius: 5px;
+    display: inline-block;
+    font-size: 14px;
+}
+
+.buttons-container a:hover {
+    background-color: #555;
 }
