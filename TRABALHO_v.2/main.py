@@ -6,6 +6,7 @@ import mysql.connector
 import random
 import string
 from flask_mail import Mail, Message
+from datetime import datetime
 
 #inicia Flask
 app = Flask(__name__)
@@ -684,6 +685,7 @@ def agendar_consulta():
             conexao_bd.commit()
 
             # Enviar o e-mail de confirmação
+            data_formatada = data_consulta.strftime('%d/%m/%Y')
             msg = Message("Confirmação de Agendamento", recipients=[usuario_logado])
             msg.body = f'''
             Olá,
@@ -692,7 +694,7 @@ def agendar_consulta():
             
             Detalhes da consulta:
             - Médico: {nome_medico}
-            - Data: {data_consulta}
+            - Data: {data_formatada}
             - Horário: {hora_inicio} - {hora_fim}
 
             Obrigado por usar nosso serviço!
