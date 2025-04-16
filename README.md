@@ -1,4 +1,4 @@
-CLINIX Odontológico
+CLINIX ODONTOLÓGIA
 
 Sistema de Gestão de Consultas Odontológicas
 
