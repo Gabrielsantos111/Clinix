@@ -6,7 +6,7 @@ import mysql.connector
 import random
 import string
 from flask_mail import Mail, Message
-from datetime import datetime
+from datetime import datetime, timedelta
 
 #inicia Flask
 app = Flask(__name__)
@@ -304,11 +304,11 @@ def tela_medico():
             try:
                 cursor = conexao_bd.cursor()
                 cursor.execute('''
-                    SELECT m.nomeMedicos, m.emailMedicos, m.idadeMedicos, m.statusMedicos, GROUP_CONCAT(e.nomeEspecialidade SEPARATOR ', ')
+                    SELECT m.idMedicos, m.nomeMedicos, m.emailMedicos, m.idadeMedicos, m.statusMedicos, GROUP_CONCAT(e.nomeEspecialidade SEPARATOR ', ')
                     FROM medicos m
                     JOIN medicos_especialidades me ON m.idMedicos = me.idMedico
                     JOIN especialidades e ON me.idEspecialidade = e.idEspecialidade
-                    GROUP BY m.idMedicos
+                    GROUP BY m.idMedicos, m.nomeMedicos, m.emailMedicos, m.idadeMedicos, m.statusMedicos
                 ''')
                 medicos = cursor.fetchall()
                 cursor.close()
@@ -753,7 +753,7 @@ def agendar_consulta():
             Sua consulta foi agendada com sucesso!
             
             Detalhes da consulta:
-            - Médico: {nome_medico}
+            - Dentista: {nome_medico}
             - Data: {data_formatada}
             - Horário: {hora_inicio} - {hora_fim}
 
@@ -799,53 +799,141 @@ def consultar_agendamentos():
         except mysql.connector.Error as err:
             flash(f'Erro ao consultar agendamentos: {err}')
 
-from datetime import timedelta
+from datetime import datetime, timedelta # Adicione no início do seu main.py se já não estiver lá, ou dentro da função se preferir.
 
 @app.route('/disponibilidades/<int:id_medico>')
 def disponibilidades(id_medico):
-    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
-    from datetime import datetime, timedelta
-    if conexao_bd.is_connected():
-        try:
-            cursor = conexao_bd.cursor()
+    print(f"--- [DEBUG] Entrando em /disponibilidades para id_medico: {id_medico} ---")
+    # Certifique-se que datetime e timedelta estão disponíveis no escopo
+    # from datetime import datetime, timedelta # Descomente se não estiver global
 
-            # Consulta SQL para excluir horários já reservados
-            cursor.execute('''
-                SELECT d.idDisponibilidade, DATE_FORMAT(d.dataDisponibilidade, '%d/%m/%Y') AS dataFormatada, 
-                       TIME_FORMAT(d.hora_inicio, '%H:%i') AS horaInicio, 
-                       TIME_FORMAT(d.hora_fim, '%H:%i') AS horaFim, d.idMedico
-                FROM disponibilidade_medicos d
-                LEFT JOIN agendamentos a ON d.idDisponibilidade = a.idDisponibilidade
-                WHERE d.idMedico = %s AND d.dataDisponibilidade >= CURDATE() AND a.idAgendamento IS NULL
-            ''', (id_medico,))
-            disponibilidades = cursor.fetchall()
+    conexao_bd = None
+    try:
+        print("[DEBUG] Tentando conectar ao banco de dados...")
+        conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+        print("[DEBUG] Conexão com BD estabelecida.")
+        
+        # Removido if conexao_bd.is_connected() pois connect() já levanta exceção em falha.
+        # O bloco try/except mysql.connector.Error já cobre falhas de conexão.
 
-            # Dividir horários em blocos de 30 minutos
-            blocos = []
-            for disp in disponibilidades:
-                id_disponibilidade, data_disponibilidade, hora_inicio, hora_fim, id_medico = disp
-                hora_inicio = datetime.strptime(hora_inicio, '%H:%M')
-                hora_fim = datetime.strptime(hora_fim, '%H:%M')
-                while hora_inicio < hora_fim:
-                    bloco_inicio = hora_inicio
-                    bloco_fim = bloco_inicio + timedelta(minutes=30)
-                    if bloco_fim > hora_fim:
-                        bloco_fim = hora_fim
-                    blocos.append({
-                        "idDisponibilidade": id_disponibilidade,
-                        "dataDisponibilidade": data_disponibilidade,
-                        "hora_inicio": bloco_inicio.strftime('%H:%M'),
-                        "hora_fim": bloco_fim.strftime('%H:%M'),
+        cursor = conexao_bd.cursor()
+        print("[DEBUG] Cursor criado.")
+
+        print("[DEBUG] Executando query por raw_disponibilidades...")
+        cursor.execute('''
+            SELECT idDisponibilidade, dataDisponibilidade, hora_inicio, hora_fim
+            FROM disponibilidade_medicos
+            WHERE idMedico = %s AND dataDisponibilidade >= CURDATE()
+        ''', (id_medico,))
+        raw_disponibilidades = cursor.fetchall()
+        print(f"[DEBUG] raw_disponibilidades: {raw_disponibilidades}")
+
+        print("[DEBUG] Executando query por booked_slots_raw...")
+        cursor.execute('''
+            SELECT dataConsulta, hora_inicio, hora_fim
+            FROM agendamentos
+            WHERE idMedico = %s AND dataConsulta >= CURDATE()
+        ''', (id_medico,))
+        booked_slots_raw = cursor.fetchall()
+        print(f"[DEBUG] booked_slots_raw: {booked_slots_raw}")
+        
+        booked_slots_set = set()
+        print("[DEBUG] Processando booked_slots_set...")
+        for bs_idx, bs in enumerate(booked_slots_raw):
+            # Adicionado tratamento para None em bs[0], bs[1], ou bs[2]
+            if bs[0] is None or bs[1] is None or bs[2] is None:
+                print(f"[DEBUG]  AVISO: Slot agendado {bs_idx} com dados nulos: {bs}, pulando.")
+                continue
+            booked_slots_set.add(
+                (bs[0], bs[1], bs[2]) 
+            )
+        print(f"[DEBUG] booked_slots_set: {booked_slots_set}")
+
+        available_blocos = []
+        now_datetime = datetime.now()
+        print(f"[DEBUG] Data e hora atuais: {now_datetime}")
+        print("[DEBUG] Processando available_blocos...")
+
+        for disp_idx, disp in enumerate(raw_disponibilidades):
+            print(f"[DEBUG]  Processando disp {disp_idx}: {disp}")
+            id_disponibilidade_pai, data_disp_obj, hora_inicio_delta, hora_fim_delta = disp # Renomeado para _delta
+
+            if not all([data_disp_obj, hora_inicio_delta, hora_fim_delta]):
+                    print(f"[DEBUG]    AVISO: Dados de disponibilidade incompletos em disp {disp_idx}: {disp}, pulando.")
+                    continue
+            try:
+                    # CONVERSÃO DE TIMEDELTA PARA DATETIME.TIME
+                    # Um timedelta é uma duração. Um time é um ponto específico no dia.
+                    # Para converter timedelta para time, podemos adicionar o timedelta a uma data de referência (meia-noite)
+                    # e então pegar o .time()
+                    ref_datetime_midnight = datetime.min # Representa 00:00:00 do ano 1, dia 1
+                    
+                    hora_inicio_obj = (ref_datetime_midnight + hora_inicio_delta).time()
+                    hora_fim_obj = (ref_datetime_midnight + hora_fim_delta).time()
+                    
+                    # Agora hora_inicio_obj e hora_fim_obj são objetos datetime.time
+                    current_slot_start_dt = datetime.combine(data_disp_obj, hora_inicio_obj)
+                    final_slot_end_dt = datetime.combine(data_disp_obj, hora_fim_obj)
+            except TypeError as te:
+                    print(f"[DEBUG]    ERRO DE TIPO ao combinar data/hora para disp {disp_idx}: {te}. Dados originais (delta): {data_disp_obj}, {hora_inicio_delta}, {hora_fim_delta}. Pulando.")
+                    continue 
+            except AttributeError as ae: # Caso hora_inicio_delta não seja um timedelta
+                    print(f"[DEBUG]    ERRO DE ATRIBUTO (possivelmente não é timedelta) para disp {disp_idx}: {ae}. Dados originais: {data_disp_obj}, {hora_inicio_delta}, {hora_fim_delta}. Pulando.")
+                    continue
+            print(f"[DEBUG]    Slot pai (disponibilidade original): de {current_slot_start_dt} a {final_slot_end_dt}")
+            
+            while current_slot_start_dt < final_slot_end_dt:
+                slot_end_candidate_dt = current_slot_start_dt + timedelta(minutes=30)
+                actual_slot_end_dt = min(slot_end_candidate_dt, final_slot_end_dt)
+                print(f"[DEBUG]      Bloco candidato: {current_slot_start_dt.time()} - {actual_slot_end_dt.time()} em {data_disp_obj.strftime('%d/%m/%Y')}")
+
+                is_booked = (
+                    data_disp_obj, 
+                    current_slot_start_dt.time(), 
+                    actual_slot_end_dt.time()
+                ) in booked_slots_set
+                print(f"[DEBUG]        Está agendado? {is_booked}")
+                
+                if current_slot_start_dt >= now_datetime and not is_booked:
+                    print("[DEBUG]        ADICIONANDO bloco à lista de disponíveis.")
+                    available_blocos.append({
+                        "idDisponibilidade": id_disponibilidade_pai,
+                        "dataDisponibilidade": data_disp_obj.strftime('%d/%m/%Y'),
+                        "hora_inicio": current_slot_start_dt.strftime('%H:%M'),
+                        "hora_fim": actual_slot_end_dt.strftime('%H:%M'),
                         "idMedico": id_medico,
                     })
-                    hora_inicio = bloco_fim
+                else:
+                    if not (current_slot_start_dt >= now_datetime):
+                        print("[DEBUG]        NÃO ADICIONANDO: Bloco candidato já passou.")
+                    if is_booked:
+                        print("[DEBUG]        NÃO ADICIONANDO: Bloco candidato já está agendado.")
 
+                current_slot_start_dt = actual_slot_end_dt
+        
+        print(f"[DEBUG] available_blocos final: {available_blocos}")
+        # Fechar cursor aqui se tudo deu certo antes de renderizar
+        if cursor:
             cursor.close()
+        print("[DEBUG] Renderizando disponibilidades.html...")
+        return render_template('disponibilidades.html', disponibilidades=available_blocos, id_medico=id_medico)
+
+    except mysql.connector.Error as err:
+        print(f"[DEBUG] !!! Erro MySQL: {err} !!!")
+        flash(f"Erro de banco de dados ao buscar disponibilidades: {err}", "error")
+        return redirect(url_for('tela_medico'))
+    except Exception as e:
+        import traceback # Para obter o stack trace completo do erro
+        print(f"[DEBUG] !!! Erro Geral Inesperado: {e} !!!")
+        print(traceback.format_exc()) # Imprime o stack trace completo no console
+        flash(f"Erro inesperado ao processar disponibilidades: {str(e)}", "error")
+        return redirect(url_for('tela_medico'))
+    finally:
+        if conexao_bd and conexao_bd.is_connected():
+            print("[DEBUG] Fechando conexão com BD no finally.")
+            if 'cursor' in locals() and cursor: # Garante que o cursor seja fechado se foi aberto
+                cursor.close()
             conexao_bd.close()
-            return render_template('disponibilidades.html', disponibilidades=blocos, id_medico=id_medico)
-        except mysql.connector.Error as err:
-            flash(f"Erro ao buscar disponibilidades: {err}")
-            return redirect('/tela_medico')
         
 @app.route('/calendario_medico/<int:id_medico>')
 def calendario_medico(id_medico):
@@ -906,10 +994,10 @@ def cancelar_consulta():
             msg.body = f'''
             Olá,
 
-            Infelizmente, sua consulta foi cancelada pelo médico.
+            Infelizmente, sua consulta foi cancelada pelo Dentista.
 
             Detalhes da consulta cancelada:
-            - Médico: {nome_medico}
+            - Dentista: {nome_medico}
             - Data: {data_formatada}
             - Horário: {hora_inicio} - {hora_fim}
 
@@ -972,3 +1060,5 @@ def excluir_disponibilidade():
 #inicia Flask
 if __name__ == "__main__":
     app.run(debug=True)
+
+    

@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lista de Médicos</title>
+    <title>Lista de Dentistas</title>
     <link rel="stylesheet" href="../static/css/tela_medico.css">
 </head>
 <body>
     <div class="header">
-        Lista de Médicos
+        Lista de Dentistas
     </div>
     <div class="container">
         <div class="box">
-            <h2>Lista de Médicos</h2>
+            <h2>Lista de Dentistas</h2>
             <table>
                 <thead>
                     <tr>
@@ -27,13 +27,8 @@
                 <tbody>
                     {% for medico in medicos %}
                     <tr>
-                        <td>{{ medico[0] }}</td>
-                        <td>{{ medico[1] }}</td>
-                        <td>{{ medico[2] }}</td>
-                        <td>{{ medico[3] }}</td>
-                        <td>{{ medico[4] }}</td>
-                        <td>
-                            <form method="GET" action="/disponibilidades/{{ loop.index }}">
+                        <td>{{ medico[1] }}</td> <td>{{ medico[2] }}</td> <td>{{ medico[3] }}</td> <td>{{ medico[4] }}</td> <td>{{ medico[5] }}</td> <td>
+                            <form method="GET" action="/disponibilidades/{{ medico[0] }}">
                                 <button type="submit">Agendar Consulta</button>
                             </form>
                         </td>
