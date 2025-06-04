@@ -9,9 +9,9 @@ O CLINIX Odontológico simplifica o agendamento de consultas, oferecendo:
 
     🦷 Agendamento online para pacientes.
 
-    📄 Laudos digitais com acesso restrito.
+    📄 Controle de agendamentos
 
-    📊 Dashboard para dentistas visualizarem consultas e anotações compartilhadas.
+    📊 Várias opções de Especialidades
 
 🚀 Funcionalidades
 Módulo	Recursos
