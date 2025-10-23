@@ -1,90 +1,86 @@
-/* Resetando alguns estilos padrão */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-/* Definindo o estilo básico do body */
+/* Estilo Geral (body) */
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
+    /* Reutilizando o fundo das outras páginas para manter a consistência */
+    background: url('../imagens/WhatsApp Image 2024-11-20 at 14.52.11.jpeg') no-repeat center center fixed;
+    background-size: cover;
+    
+    /* Centraliza o formulário na tela (vertical e horizontalmente) */
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
-    flex-direction: column;
+    margin: 0;
+    padding: 0;
 }
 
-/* Formulários e seus elementos */
+/* Caixa do Formulário */
 form {
-    background-color: white;
-    border: 1px solid #ddd;
-    padding: 20px;
-    margin: 10px;
-    width: 300px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-label {
-    font-size: 14px;
-    color: #333;
-    margin-bottom: 8px;
-    display: block;
-}
-
-input[type="email"],
-input[type="password"] {
+    background-color: rgba(255, 255, 255, 0.95); /* Fundo branco translúcido */
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     width: 100%;
-    padding: 10px;
-    margin: 8px 0 20px 0;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    max-width: 400px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+/* Elementos do Formulário */
+label {
+    display: block; /* Faz a label ocupar uma linha inteira */
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+input[type="email"] {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 25px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-sizing: border-box; /* Garante que o padding não afete a largura total */
     font-size: 16px;
 }
 
 button {
     width: 100%;
     padding: 12px;
-    background-color: #123b92;
+    background-color: #00a99d; /* Cor principal do seu site */
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 5px;
     font-size: 16px;
+    font-weight: bold;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s ease;
 }
 
 button:hover {
-    background-color: #114bc9;
+    background-color: #007f79; /* Tom mais escuro para o efeito hover */
 }
-
-/* Títulos */
-h2 {
-    font-size: 24px;
-    color: #333;
-    margin-bottom: 20px;
-}
-
-/* Página de Confirmação de E-mail */
-form {
-    text-align: center;
-}
-
-/* Alterações específicas para a página de redefinição de senha */
-h2 {
-    font-size: 22px;
+/* --- Estilo para o Botão Flutuante de Voltar --- */
+.btn-voltar {
+    position: fixed; /* Mantém o botão fixo na tela, mesmo com rolagem */
+    bottom: 20px;    /* 20 pixels de distância da parte de baixo */
+    left: 20px;      /* 20 pixels de distância da esquerda */
+    z-index: 1000;   /* Garante que ele fique acima da maioria dos outros elementos */
+    
+    background-color: #555; /* Cor de fundo escura */
+    color: white;           /* Texto branco */
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-size: 14px;
     font-weight: bold;
-    text-align: center;
-    color: #333;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s, transform 0.2s;
 }
 
-form input[type="password"] {
-    border: 1px solid #ccc;
-    font-size: 16px;
-}
-
-form button {
-    width: auto;
-    margin-top: 20px;
+.btn-voltar:hover {
+    background-color: #333; /* Cor mais escura ao passar o mouse */
+    transform: scale(1.05);  /* Leve aumento de tamanho */
 }

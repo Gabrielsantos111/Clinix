@@ -24,7 +24,7 @@
                 <td>{{ disponibilidade[2] }}</td>
                 <td>{{ disponibilidade[3] }}</td>
                 <td>
-                    <form method="POST" action="/excluir_disponibilidade">
+                    <form method="POST" action="/excluir_disponibilidade" onsubmit="return confirm('Tem certeza que deseja excluir esta disponibilidade?');">
                         <input type="hidden" name="idDisponibilidade" value="{{ disponibilidade[0] }}">
                         <button type="submit">Excluir</button>
                     </form>

@@ -4,15 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Redefinir Senha</title>
-    <link rel="stylesheet" href="/static/css/redefinir_senha.css">
+    <link rel="stylesheet" href="../static/css/redefinir_senha.css">
 
 </head>
 <body>
-    <h2>Redefinir Senha</h2>
-    <form method="POST">
+    <form method="POST" action="/redefinir_senha">
+        <h2>Redefinir Senha</h2> 
+        
         <label for="nova_senha">Nova Senha:</label>
         <input type="password" name="nova_senha" required>
         <button type="submit">Redefinir</button>
     </form>
+    <button class="btn-voltar" onclick="history.back()">Voltar</button>
 </body>
 </html>

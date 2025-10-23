@@ -80,3 +80,24 @@ table th, table td {
 .button-group .btn-primary {
     background-color: #00a99d;
 }
+.home-button-container {
+    position: absolute;
+    top: 25px;
+    left: 30px;
+    z-index: 10;
+}
+
+.home-button-container a {
+    background-color: #007f79;
+    color: white;
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.home-button-container a:hover {
+    background-color: #005f5a;
+}
