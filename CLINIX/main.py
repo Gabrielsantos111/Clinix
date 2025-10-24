@@ -23,8 +23,8 @@ app.config['MAIL_DEFAULT_SENDER'] = ('Consulta Online', 'clinix.projeto@gmail.co
 # Inicializar Flask-Mail
 mail = Mail(app)
 
-#variável global para verificar se o usuário está logado
-logado = False
+# REMOVIDA: A variável global 'logado' foi removida.
+# logado = False 
 
 from datetime import datetime
 
@@ -81,14 +81,14 @@ def obter_informacoes_medico(crm):
 #rota página inicial
 @app.route('/')
 def home():
-    global logado
-    logado = False
+    # REMOVIDA: A linha 'logado = False' foi removida.
     return render_template('login.html')
 
 #rota página download
 @app.route('/pag_download')
 def pag_download():
-    if logado:
+    # CORREÇÃO: Trocado 'if logado:' por 'if 'email' in session:'
+    if 'email' in session: 
         arquivo = []
         for documento in os.listdir('arquivos'):
             arquivo.append(documento)  #add os nomes dos arquivos na lista
@@ -96,23 +96,50 @@ def pag_download():
     else:
         return redirect('/')  
     
-#rota página tela usuário
+# --- ROTA MODIFICADA ---
 @app.route('/tela_usuario')
 def tela_usuario():
-    if logado:
+    # Verifica se o usuário está logado
+    if 'email' in session:
         email_do_usuario_logado = session.get('email')
         if email_do_usuario_logado:
+            # 1. Busca informações do usuário (para os botões de perfil)
             usuario = obter_informacoes_usuario(email_do_usuario_logado)
             if usuario:
-                return render_template('tela_usuario.html', usuario=usuario)
+                # 2. Busca a lista de médicos ativos
+                medicos = [] # Lista padrão
+                conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+                if conexao_bd.is_connected():
+                    try:
+                        cursor = conexao_bd.cursor()
+                        # Query para buscar médicos ATIVOS
+                        cursor.execute('''
+                            SELECT m.idMedicos, m.nomeMedicos, m.emailMedicos, m.idadeMedicos, m.statusMedicos, GROUP_CONCAT(e.nomeEspecialidade SEPARATOR ', ')
+                            FROM medicos m
+                            JOIN medicos_especialidades me ON m.idMedicos = me.idMedico
+                            JOIN especialidades e ON me.idEspecialidade = e.idEspecialidade
+                            WHERE m.statusMedicos = 'Ativo'
+                            GROUP BY m.idMedicos, m.nomeMedicos, m.emailMedicos, m.idadeMedicos, m.statusMedicos
+                        ''')
+                        medicos = cursor.fetchall()
+                        cursor.close()
+                        conexao_bd.close()
+                    except mysql.connector.Error as err:
+                        flash(f"Erro ao carregar médicos: {err}")
+                        # Continua mesmo se houver erro, apenas com a lista vazia
+                
+                # 3. Envia ambos (usuário e médicos) para o template
+                return render_template('tela_usuario.html', usuario=usuario, medicos=medicos)
+        
         flash('Erro ao obter informações do usuário')
         return redirect('/')
     else:
+        # Se não estiver logado, redireciona para o login
         return redirect('/')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    global logado
+    # REMOVIDA: 'global logado' não é mais necessária aqui.
 
     if request.method == 'GET':
         # Renderiza a página de login no método GET
@@ -136,13 +163,13 @@ def login():
 
                     # Verifica se é o administrador
                     if email == 'adm' and senha == '000':
-                        logado = True
+                        # REMOVIDA: 'logado = True'
                         session['email'] = email
                         return redirect("/adm")
 
                     # Verifica se o e-mail e a senha do usuário são válidos
                     if usuarioNome == email and usuarioSenha == senha:
-                        logado = True
+                        # REMOVIDA: 'logado = True'
                         session['email'] = email
                         return redirect('/tela_usuario')
 
@@ -161,7 +188,7 @@ def login():
 #rota cadastro
 @app.route('/cadastrarUsuario', methods=['POST'])
 def cadastrarUsuario():
-    global logado
+    # REMOVIDA: 'global logado'
     nome = request.form.get('nome')
     email = request.form.get('email')
     senha = request.form.get('senha')
@@ -192,8 +219,7 @@ def cadastrarUsuario():
 #rota upload arquivos
 @app.route("/upload", methods=['POST'])
 def upload():
-    global logado
-    logado = True
+    # REMOVIDA: 'global logado' e 'logado = True'
 
     arquivo = request.files.get('documento')  #obtém arquivo do formulário
     nome_arquivo = arquivo.filename.replace(" ","-")  #substitui espaços no nome do arquivo por hífens
@@ -294,11 +320,14 @@ def redefinir_senha(token):
                 cursor.close()
                 conexao_bd.close()
 
-    return render_template('redefinir_senha.html', email=email_usuario)
+    # Correção de redefinição de senha (já aplicada antes)
+    return render_template('redefinir_senha.html', token=token)
 
 @app.route('/tela_medico')
 def tela_medico():
-    if logado:
+    # CORREÇÃO: Trocado 'if logado:' por 'if 'email' in session:'
+    # Esta rota deve ser acessível se o usuário estiver logado
+    if 'email' in session: 
         conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
         if conexao_bd.is_connected():
             try:
@@ -323,7 +352,8 @@ def tela_medico():
 
 @app.route('/atualizar_cadastro')
 def atualizar_cadastro():
-    if logado:
+    # CORREÇÃO: Trocado 'if logado:' por 'if 'email' in session:'
+    if 'email' in session:
         email_do_usuario_logado = session.get('email')
         if email_do_usuario_logado:
             usuario = obter_informacoes_usuario(email_do_usuario_logado)
@@ -336,7 +366,8 @@ def atualizar_cadastro():
 
 @app.route('/atualizar_cadastro', methods=['POST'])
 def processar_atualizacao():
-    if logado:
+    # CORREÇÃO: Trocado 'if logado:' por 'if 'email' in session:'
+    if 'email' in session:
         email = session.get('email')
         nome = request.form.get('nome')
         senha = request.form.get('senha')
@@ -367,14 +398,16 @@ def processar_atualizacao():
     
 @app.route('/confirmar_exclusao')
 def confirmar_exclusao():
-    if logado:
+    # CORREÇÃO: Trocado 'if logado:' por 'if 'email' in session:'
+    if 'email' in session:
         return render_template('confirmar_exclusao.html')
     else:
         return redirect('/')
 
 @app.route('/excluir_cadastro', methods=['POST'])
 def excluir_cadastro():
-    if logado:
+    # CORREÇÃO: Trocado 'if logado:' por 'if 'email' in session:'
+    if 'email' in session:
         email = session.get('email')
         # Conecta ao banco de dados MySQL
         conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
@@ -413,32 +446,38 @@ def pag_medico():
         try:
             cursor = conexao_bd.cursor()
 
-            # Seleciona o ID do médico logado
-            cursor.execute('SELECT idMedicos FROM medicos WHERE crmMedicos = %s', (crm_logado,))
-            id_medico = cursor.fetchone()[0]  # Obtém o ID do médico
-
-            # Seleciona os dados do médico logado
+            # Query 1: Buscar os dados principais do médico
             cursor.execute('''
-                SELECT m.nomeMedicos, m.emailMedicos, m.idadeMedicos, m.statusMedicos, m.crmMedicos, 
-                       e.nomeEspecialidade, DATE_FORMAT(d.dataDisponibilidade, '%d/%m/%Y') AS dataFormatada, 
-                       TIME_FORMAT(d.hora_inicio, '%H:%i'), TIME_FORMAT(d.hora_fim, '%H:%i')
+                SELECT m.idMedicos, m.nomeMedicos, m.emailMedicos, m.idadeMedicos, m.statusMedicos, m.crmMedicos, e.nomeEspecialidade
                 FROM medicos m
                 JOIN medicos_especialidades me ON m.idMedicos = me.idMedico
                 JOIN especialidades e ON me.idEspecialidade = e.idEspecialidade
-                LEFT JOIN disponibilidade_medicos d ON m.idMedicos = d.idMedico
                 WHERE m.crmMedicos = %s
             ''', (crm_logado,))
-            
-            medico_info = cursor.fetchall()  # Obtém as informações de especialidade e disponibilidade
+            medico_info = cursor.fetchone() # Usamos fetchone() pois esperamos apenas um médico
+
+            if not medico_info:
+                flash('Médico não encontrado.')
+                return redirect('/login_medico')
+
+            id_medico = medico_info[0]
+
+            # Query 2: Buscar as disponibilidades do médico
+            cursor.execute('''
+                SELECT DATE_FORMAT(dataDisponibilidade, '%d/%m/%Y'), 
+                       TIME_FORMAT(hora_inicio, '%H:%i'), 
+                       TIME_FORMAT(hora_fim, '%H:%i')
+                FROM disponibilidade_medicos
+                WHERE idMedico = %s
+            ''', (id_medico,))
+            disponibilidades = cursor.fetchall()
 
             cursor.close()
             conexao_bd.close()
-            if medico_info:
-                # Renderiza a página com as informações do médico e seu ID
-                return render_template('pag_medico.html', medico_info=medico_info, id_medico=id_medico)
-            else:
-                flash('Médico não encontrado.')
-                return redirect('/login_medico')
+            
+            # Renderiza a página com as informações do médico e sua disponibilidade
+            return render_template('pag_medico.html', medico_info=medico_info, disponibilidades=disponibilidades, id_medico=id_medico)
+
         except mysql.connector.Error as err:
             flash(f'Erro ao conectar ao banco de dados: {err}')
             return redirect('/login_medico')
@@ -593,6 +632,7 @@ def atualizar_cadastro_medico():
         conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
         if conexao_bd.is_connected():
             cursor = conexao_bd.cursor()
+            # Correção de índice já aplicada
             cursor.execute('SELECT nomeMedicos, emailMedicos, idadeMedicos, statusMedicos, senhaMedicos, crmMedicos FROM medicos WHERE crmMedicos = %s', (crm_logado,))
             medico = cursor.fetchone()
             cursor.close()
@@ -637,11 +677,16 @@ def atualizar_cadastro_medico():
         else:
             flash('Erro ao conectar ao banco de dados.')
             return redirect('/atualizar_cadastro_medico')
-        
+
+# --- ROTA MODIFICADA (Lógica de quebra de blocos) ---
 @app.route('/alterar_disponibilidade', methods=['GET', 'POST'])
 def alterar_disponibilidade():
+    # Apenas médicos logados podem alterar
+    if 'crm' not in session:
+        flash('Por favor, faça login de médico primeiro.')
+        return redirect('/login_medico')
+
     if request.method == 'POST':
-        # Conecta ao banco de dados MySQL
         conexao_bd = mysql.connector.connect(
             host='localhost', 
             database='consulta_net', 
@@ -652,31 +697,83 @@ def alterar_disponibilidade():
         if conexao_bd.is_connected():
             try:
                 cursor = conexao_bd.cursor()
-                # Capture os dados do formulário
+                
                 crm = request.form.get('crm')
                 dataDisponibilidade = request.form.get('dataDisponibilidade')
-                hora_inicio = request.form.get('hora_inicio')
-                hora_fim = request.form.get('hora_fim')
-                # Primeiro, busque o ID do médico pelo CRM
+                bloco_manha = request.form.get('bloco_manha') # Valor '08:00-12:00'
+                bloco_tarde = request.form.get('bloco_tarde') # Valor '14:00-18:00'
+                hora_inicio_custom = request.form.get('hora_inicio')
+                hora_fim_custom = request.form.get('hora_fim')
+
                 cursor.execute('SELECT idMedicos FROM medicos WHERE crmMedicos = %s', (crm,))
                 idMedico = cursor.fetchone()
 
-                if idMedico:
-                    # Insira os dados de disponibilidade na tabela de disponibilidade_medicos
+                if not idMedico:
+                    flash('Médico não encontrado.')
+                    return redirect('/pag_medico')
+
+                # Lista de blocos-pai para processar (ex: '08:00', '12:00')
+                blocos_para_processar = []
+                
+                if bloco_manha:
+                    blocos_para_processar.append(bloco_manha.split('-')) # Adiciona ['08:00', '12:00']
+                    
+                if bloco_tarde:
+                    blocos_para_processar.append(bloco_tarde.split('-')) # Adiciona ['14:00', '18:00']
+
+                if hora_inicio_custom and hora_fim_custom:
+                    blocos_para_processar.append([hora_inicio_custom, hora_fim_custom])
+
+                if not blocos_para_processar:
+                    flash('Nenhum horário selecionado. Por favor, marque um bloco ou insira um horário personalizado.')
+                    return redirect(f'/alterar_disponibilidade?crm={crm}')
+
+                # --- Início da Lógica de Quebra de Bloco ---
+                
+                # Lista final de slots de 30 minutos (ex: '08:00', '08:30')
+                slots_para_inserir = []
+                formato_hora = '%H:%M'
+                data_ref = datetime(2000, 1, 1) # Data de referência para cálculos
+                delta_30_min = timedelta(minutes=30)
+
+                for inicio_str, fim_str in blocos_para_processar:
+                    try:
+                        inicio_dt = datetime.combine(data_ref, datetime.strptime(inicio_str, formato_hora).time())
+                        fim_dt = datetime.combine(data_ref, datetime.strptime(fim_str, formato_hora).time())
+                        
+                        current_dt = inicio_dt
+                        while current_dt < fim_dt:
+                            next_dt = current_dt + delta_30_min
+                            # Garante que não ultrapasse o tempo final
+                            if next_dt > fim_dt:
+                                next_dt = fim_dt
+                            
+                            slots_para_inserir.append((
+                                current_dt.strftime(formato_hora), 
+                                next_dt.strftime(formato_hora)
+                            ))
+                            current_dt = next_dt
+
+                    except ValueError:
+                        flash(f'Formato de hora inválido: {inicio_str}-{fim_str}')
+                        continue
+                
+                # --- Fim da Lógica de Quebra de Bloco ---
+
+                # Loop para inserir todos os slots de 30 minutos
+                for inicio, fim in slots_para_inserir:
                     cursor.execute('''
                         INSERT INTO disponibilidade_medicos (idMedico, dataDisponibilidade, hora_inicio, hora_fim) 
                         VALUES (%s, %s, %s, %s)
-                    ''', (idMedico[0], dataDisponibilidade, hora_inicio, hora_fim))
-                    conexao_bd.commit()
-                    flash('Disponibilidade alterada com sucesso.')
-                    return redirect('/pag_medico')  # Redireciona após sucesso
-                else:
-                    flash('Médico não encontrado.')
-                    return redirect('/pag_medico')  # Redireciona em caso de erro
+                    ''', (idMedico[0], dataDisponibilidade, inicio, fim))
+                
+                conexao_bd.commit()
+                flash(f'{len(slots_para_inserir)} horários adicionados com sucesso para {dataDisponibilidade}.')
+                return redirect('/pag_medico')  # Redireciona após sucesso
 
             except mysql.connector.Error as err:
                 flash(f'Erro ao alterar disponibilidade: {err}')
-                return redirect('/pag_medico')  # Certifique-se de retornar algo em caso de erro
+                return redirect('/pag_medico')
 
             finally:
                 if cursor:
@@ -686,7 +783,8 @@ def alterar_disponibilidade():
 
         else:
             flash('Erro ao conectar ao banco de dados.')
-            return redirect('/pag_medico')  # Retorna em caso de falha de conexão
+            return redirect('/pag_medico')
+    
     # Caso o método seja GET, renderize o formulário de disponibilidade
     elif request.method == 'GET':
         crm = request.args.get('crm')
@@ -772,11 +870,11 @@ def agendar_consulta():
 
 @app.route('/consultar_agendamentos', methods=['GET'])
 def consultar_agendamentos():
-    if 'usuario' not in session:
+    if 'email' not in session: # CORREÇÃO: Usar 'email'
         flash('Por favor, faça login primeiro.')
         return redirect('/login')
     
-    id_usuario = session.get('usuario')
+    email_usuario = session.get('email') # CORREÇÃO: Obter o email
     conexao_bd = mysql.connector.connect(
         host='localhost',
         database='consulta_net',
@@ -787,6 +885,15 @@ def consultar_agendamentos():
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
+            
+            # CORREÇÃO: Buscar idUsuario a partir do email
+            cursor.execute('SELECT idUsuario FROM usuario WHERE emailUsuario = %s', (email_usuario,))
+            resultado = cursor.fetchone()
+            if not resultado:
+                flash('Usuário não encontrado.')
+                return redirect('/')
+            id_usuario = resultado[0]
+
             cursor.execute('''
                 SELECT a.idAgendamento, m.nomeMedicos, a.dataConsulta, a.hora_inicio, a.hora_fim
                 FROM agendamentos a
@@ -798,6 +905,11 @@ def consultar_agendamentos():
             return render_template('consultar_agendamentos.html', agendamentos=agendamentos)
         except mysql.connector.Error as err:
             flash(f'Erro ao consultar agendamentos: {err}')
+            return redirect('/tela_usuario')
+        finally:
+            if conexao_bd.is_connected():
+                cursor.close()
+                conexao_bd.close()
 
 from datetime import datetime, timedelta # Adicione no início do seu main.py se já não estiver lá, ou dentro da função se preferir.
 
@@ -839,14 +951,24 @@ def disponibilidades(id_medico):
         
         booked_slots_set = set()
         print("[DEBUG] Processando booked_slots_set...")
+        ref_datetime_midnight = datetime.min # Adicione esta linha de referência
+        
         for bs_idx, bs in enumerate(booked_slots_raw):
             # Adicionado tratamento para None em bs[0], bs[1], ou bs[2]
             if bs[0] is None or bs[1] is None or bs[2] is None:
                 print(f"[DEBUG]  AVISO: Slot agendado {bs_idx} com dados nulos: {bs}, pulando.")
                 continue
+            
+            # --- INÍCIO DA CORREÇÃO ---
+            # Converte os timedeltas de hora_inicio e hora_fim para objetos time
+            hora_inicio_agendada = (ref_datetime_midnight + bs[1]).time()
+            hora_fim_agendada = (ref_datetime_midnight + bs[2]).time()
+            
             booked_slots_set.add(
-                (bs[0], bs[1], bs[2]) 
+                (bs[0], hora_inicio_agendada, hora_fim_agendada) # Adiciona os valores convertidos
             )
+            # --- FIM DA CORREÇÃO ---
+            
         print(f"[DEBUG] booked_slots_set: {booked_slots_set}")
 
         available_blocos = []
@@ -854,6 +976,10 @@ def disponibilidades(id_medico):
         print(f"[DEBUG] Data e hora atuais: {now_datetime}")
         print("[DEBUG] Processando available_blocos...")
 
+        # --- AVISO: LÓGICA DE QUEBRA DE BLOCOS REMOVIDA DESTA ROTA ---
+        # A lógica de quebra de blocos foi movida para a inserção (alterar_disponibilidade)
+        # Esta rota agora apenas exibe os slots de 30 minutos que já estão no banco.
+        
         for disp_idx, disp in enumerate(raw_disponibilidades):
             print(f"[DEBUG]  Processando disp {disp_idx}: {disp}")
             id_disponibilidade_pai, data_disp_obj, hora_inicio_delta, hora_fim_delta = disp # Renomeado para _delta
@@ -862,55 +988,41 @@ def disponibilidades(id_medico):
                     print(f"[DEBUG]    AVISO: Dados de disponibilidade incompletos em disp {disp_idx}: {disp}, pulando.")
                     continue
             try:
-                    # CONVERSÃO DE TIMEDELTA PARA DATETIME.TIME
-                    # Um timedelta é uma duração. Um time é um ponto específico no dia.
-                    # Para converter timedelta para time, podemos adicionar o timedelta a uma data de referência (meia-noite)
-                    # e então pegar o .time()
-                    ref_datetime_midnight = datetime.min # Representa 00:00:00 do ano 1, dia 1
-                    
+                    ref_datetime_midnight = datetime.min
                     hora_inicio_obj = (ref_datetime_midnight + hora_inicio_delta).time()
                     hora_fim_obj = (ref_datetime_midnight + hora_fim_delta).time()
                     
-                    # Agora hora_inicio_obj e hora_fim_obj são objetos datetime.time
-                    current_slot_start_dt = datetime.combine(data_disp_obj, hora_inicio_obj)
-                    final_slot_end_dt = datetime.combine(data_disp_obj, hora_fim_obj)
-            except TypeError as te:
-                    print(f"[DEBUG]    ERRO DE TIPO ao combinar data/hora para disp {disp_idx}: {te}. Dados originais (delta): {data_disp_obj}, {hora_inicio_delta}, {hora_fim_delta}. Pulando.")
-                    continue 
-            except AttributeError as ae: # Caso hora_inicio_delta não seja um timedelta
-                    print(f"[DEBUG]    ERRO DE ATRIBUTO (possivelmente não é timedelta) para disp {disp_idx}: {ae}. Dados originais: {data_disp_obj}, {hora_inicio_delta}, {hora_fim_delta}. Pulando.")
-                    continue
-            print(f"[DEBUG]    Slot pai (disponibilidade original): de {current_slot_start_dt} a {final_slot_end_dt}")
+                    slot_start_dt = datetime.combine(data_disp_obj, hora_inicio_obj)
+                    slot_end_dt = datetime.combine(data_disp_obj, hora_fim_obj)
             
-            while current_slot_start_dt < final_slot_end_dt:
-                slot_end_candidate_dt = current_slot_start_dt + timedelta(minutes=30)
-                actual_slot_end_dt = min(slot_end_candidate_dt, final_slot_end_dt)
-                print(f"[DEBUG]      Bloco candidato: {current_slot_start_dt.time()} - {actual_slot_end_dt.time()} em {data_disp_obj.strftime('%d/%m/%Y')}")
+            except Exception as e: 
+                    print(f"[DEBUG]    ERRO ao processar disp {disp_idx}: {e}. Dados: {disp}. Pulando.")
+                    continue
+            
+            print(f"[DEBUG]      Slot de 30min: {slot_start_dt.time()} - {slot_end_dt.time()} em {data_disp_obj.strftime('%d/%m/%Y')}")
 
-                is_booked = (
-                    data_disp_obj, 
-                    current_slot_start_dt.time(), 
-                    actual_slot_end_dt.time()
-                ) in booked_slots_set
-                print(f"[DEBUG]        Está agendado? {is_booked}")
-                
-                if current_slot_start_dt >= now_datetime and not is_booked:
-                    print("[DEBUG]        ADICIONANDO bloco à lista de disponíveis.")
-                    available_blocos.append({
-                        "idDisponibilidade": id_disponibilidade_pai,
-                        "dataDisponibilidade": data_disp_obj.strftime('%d/%m/%Y'),
-                        "hora_inicio": current_slot_start_dt.strftime('%H:%M'),
-                        "hora_fim": actual_slot_end_dt.strftime('%H:%M'),
-                        "idMedico": id_medico,
-                    })
-                else:
-                    if not (current_slot_start_dt >= now_datetime):
-                        print("[DEBUG]        NÃO ADICIONANDO: Bloco candidato já passou.")
-                    if is_booked:
-                        print("[DEBUG]        NÃO ADICIONANDO: Bloco candidato já está agendado.")
+            is_booked = (
+                data_disp_obj, 
+                slot_start_dt.time(), 
+                slot_end_dt.time()
+            ) in booked_slots_set
+            print(f"[DEBUG]        Está agendado? {is_booked}")
+            
+            if slot_start_dt >= now_datetime and not is_booked:
+                print("[DEBUG]        ADICIONANDO bloco à lista de disponíveis.")
+                available_blocos.append({
+                    "idDisponibilidade": id_disponibilidade_pai,
+                    "dataDisponibilidade": data_disp_obj.strftime('%d/%m/%Y'),
+                    "hora_inicio": slot_start_dt.strftime('%H:%M'),
+                    "hora_fim": slot_end_dt.strftime('%H:%M'),
+                    "idMedico": id_medico,
+                })
+            else:
+                if not (slot_start_dt >= now_datetime):
+                    print("[DEBUG]        NÃO ADICIONANDO: Slot já passou.")
+                if is_booked:
+                    print("[DEBUG]        NÃO ADICIONANDO: Slot já está agendado.")
 
-                current_slot_start_dt = actual_slot_end_dt
-        
         print(f"[DEBUG] available_blocos final: {available_blocos}")
         # Fechar cursor aqui se tudo deu certo antes de renderizar
         if cursor:
@@ -934,20 +1046,37 @@ def disponibilidades(id_medico):
             if 'cursor' in locals() and cursor: # Garante que o cursor seja fechado se foi aberto
                 cursor.close()
             conexao_bd.close()
-        
+
+# --- ROTA MODIFICADA (QUERY CORRIGIDA) ---
 @app.route('/calendario_medico/<int:id_medico>')
 def calendario_medico(id_medico):
     conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
+            
+            # --- INÍCIO DA CORREÇÃO ---
+            # Esta query agora funciona perfeitamente com os slots de 30min
             cursor.execute('''
-                SELECT DATE_FORMAT(d.dataDisponibilidade, '%d/%m/%Y') AS dataFormatada, d.hora_inicio, d.hora_fim, u.nomeUsuario, a.idAgendamento
-                FROM disponibilidade_medicos d
-                LEFT JOIN agendamentos a ON d.idDisponibilidade = a.idDisponibilidade
-                LEFT JOIN usuario u ON a.idUsuario = u.idUsuario
-                WHERE d.idMedico = %s
+                SELECT 
+                    DATE_FORMAT(d.dataDisponibilidade, '%d/%m/%Y') AS dataFormatada, 
+                    IFNULL(TIME_FORMAT(a.hora_inicio, '%H:%i'), TIME_FORMAT(d.hora_inicio, '%H:%i')) AS hora_inicio_final,
+                    IFNULL(TIME_FORMAT(a.hora_fim, '%H:%i'), TIME_FORMAT(d.hora_fim, '%H:%i')) AS hora_fim_final,
+                    u.nomeUsuario, 
+                    a.idAgendamento
+                FROM 
+                    disponibilidade_medicos d
+                LEFT JOIN 
+                    agendamentos a ON d.idDisponibilidade = a.idDisponibilidade
+                LEFT JOIN 
+                    usuario u ON a.idUsuario = u.idUsuario
+                WHERE 
+                    d.idMedico = %s
+                ORDER BY 
+                    dataFormatada, hora_inicio_final;
             ''', (id_medico,))
+            # --- FIM DA CORREÇÃO ---
+            
             consultas = cursor.fetchall()
 
             cursor.close()
@@ -1060,5 +1189,3 @@ def excluir_disponibilidade():
 #inicia Flask
 if __name__ == "__main__":
     app.run(debug=True)
-
-    

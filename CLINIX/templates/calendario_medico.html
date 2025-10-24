@@ -2,41 +2,48 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
     <title>Calendário do Médico</title>
-    <link rel="stylesheet" href="../static/css/calendario_medico.css">
+    <link rel="stylesheet" href="/static/css/calendario_medico.css">
 </head>
 <body>
-    <h2>Calendário de Consultas</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Data</th>
-                <th>Hora Início</th>
-                <th>Hora Fim</th>
-                <th>Paciente</th>
-                <th>Ação</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for consulta in consultas %}
-            <tr>
-                <td>{{ consulta[0] }}</td>
-                <td>{{ consulta[1] }}</td>
-                <td>{{ consulta[2] }}</td>
-                <td>{{ consulta[3] if consulta[3] else 'Disponível' }}</td>
-                <td>
-                    {% if consulta[4] %}
-                    <form method="POST" action="/cancelar_consulta">
-                        <input type="hidden" name="idAgendamento" value="{{ consulta[4] }}">
-                        <button type="submit">Cancelar</button>
-                    </form>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <button onclick="window.location.href='/pag_medico'">Voltar</button>
+
+    <div class="container">
+        <div class="box">
+            <h2>Calendário de Consultas</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Hora Início</th>
+                        <th>Hora Fim</th>
+                        <th>Paciente</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for consulta in consultas %}
+                    <tr>
+                        <td>{{ consulta[0] }}</td>
+                        <td>{{ consulta[1] }}</td>
+                        <td>{{ consulta[2] }}</td>
+                        <td>{{ consulta[3] if consulta[3] else 'Disponível' }}</td>
+                        <td>
+                            {% if consulta[4] %}
+                            <form method="POST" action="/cancelar_consulta" onsubmit="return confirm('Tem certeza de que quer cancelar o agendamento?');">
+                                <input type="hidden" name="idAgendamento" value="{{ consulta[4] }}">
+                                <button type="submit">Cancelar</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <button class="btn-voltar" onclick="window.location.href='/pag_medico'">Voltar</button>
+
 </body>
 </html>

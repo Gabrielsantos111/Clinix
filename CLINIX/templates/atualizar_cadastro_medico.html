@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Atualizar Cadastro Dentista</title>
-    <link rel="stylesheet" href="../static/css/atualizar_cadastro_medico.css">
+    <link rel="stylesheet" href="/static/css/atualizar_cadastro_medico.css">
 </head>
 <body>
 
@@ -12,13 +12,13 @@
         Atualizar Cadastro Dentista
     </div>
     <div class="home-button-container">
-        <a href="index.html">Início</a>
+        <a href="/">Início</a>
     </div>
     <div class="container">
         <div class="box">
             <h2>Atualização de Cadastro</h2>
             <form action="/atualizar_cadastro_medico" method="post">
-                <input type="hidden" name="crm" value="{{ medico[7] }}">
+                <input type="hidden" name="crm" value="{{ medico[5] }}">
 
                 <div class="form-group">
                     <label for="nome">Nome *</label>
@@ -39,8 +39,8 @@
                 <div class="form-group">
                     <label for="status">Status *</label>
                     <select id="status" name="status" required>
-                        <option value="Ativo" {% if medico[5] == 'Ativo' %}selected{% endif %}>Ativo</option>
-                        <option value="Inativo" {% if medico[5] == 'Inativo' %}selected{% endif %}>Inativo</option>
+                        <option value="Ativo" {% if medico[3] == 'Ativo' %}selected{% endif %}>Ativo</option>
+                        <option value="Inativo" {% if medico[3] == 'Inativo' %}selected{% endif %}>Inativo</option>
                     </select>
                 </div>
                 <button type="submit" class="btn-primary">Atualizar</button>

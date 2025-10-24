@@ -4,40 +4,93 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Perfil do Paciente</title>
-    <link rel="stylesheet" href="../static/css/tela_usuario.css">
+    <link rel="stylesheet" href="/static/css/tela_usuario.css">
+    
+    <style>
+        .medicos-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            margin-bottom: 25px; /* Espaço antes dos botões */
+        }
+        .medicos-table th, .medicos-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .medicos-table th {
+            background-color: #f9f9f9;
+        }
+        .medicos-table tr:hover {
+            background-color: #f1f1f1;
+        }
+        .medicos-table a {
+            text-decoration: none;
+            background-color: #00a99d;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            display: inline-block;
+        }
+        .medicos-table a:hover {
+            background-color: #007f79;
+        }
+        .button-group form {
+            display: inline-block; /* Alinha os botões de formulário */
+        }
+    </style>
 </head>
 <body>
 
     <div class="header">
         Perfil do Paciente
     </div>
+
     <div class="home-button-container">
-            <a href="index.html">Início</a>
-        </div>
+        <a href="/">Início</a>
+    </div>
+
     <div class="container">
         <div class="box">
-            <h2>Informações do Paciente</h2>
-            <div class="user-info">
-                <p><strong>Email:</strong> {{ usuario.email }}</p>
-                <p><strong>Nome:</strong> {{ usuario.nome }}</p>
-                <p><strong>Sexo:</strong> {{ usuario.sexo }}</p>
-                <p><strong>Idade:</strong> {{ usuario.idade }}</p>
-                <p><strong>Telefone:</strong> {{ usuario.telefone }}</p>
-                <p><strong>Endereço:</strong> {{ usuario.endereco }}</p>
-            </div>
+            
+            <h2>Dentistas Disponíveis</h2>
+            {% if medicos %}
+                <table class="medicos-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Especialidade</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for medico in medicos %}
+                        <tr>
+                            <td>{{ medico[1] }}</td> <td>{{ medico[5] }}</td> <td>
+                                <a href="/disponibilidades/{{ medico[0] }}">Ver Horários</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>Nenhum dentista com status "Ativo" encontrado no momento.</p>
+            {% endif %}
+            <hr> <h2 style="margin-top: 20px;">Minha Conta</h2>
             <div class="button-group">
-                <button onclick="window.location.href='/tela_medico'">Dentistas</button>
                 <button onclick="window.location.href='/pag_download'">Baixar Arquivos</button>
+                
                 <form action="/atualizar_cadastro" method="get">
                     <button type="submit">Atualizar Dados</button>
                 </form>
-                <form action="/excluir_cadastro" method="post">
+                
+                <form action="/excluir_cadastro" method="post" onsubmit="return confirm('Tem certeza de que quer excluir?');">
                     <button type="submit">Excluir Cadastro</button>
                 </form>
             </div>
         </div>
     </div>
     <button class="btn-voltar" onclick="history.back()">Voltar</button>
-
 </body>
 </html>

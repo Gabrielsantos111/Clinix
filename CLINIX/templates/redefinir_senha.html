@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Redefinir Senha</title>
-    <link rel="stylesheet" href="../static/css/redefinir_senha.css">
+    <link rel="stylesheet" href="/static/css/redefinir_senha.css">
 
 </head>
 <body>
-    <form method="POST" action="/redefinir_senha">
+    <form method="POST" action="/redefinir_senha/{{ token }}">
         <h2>Redefinir Senha</h2> 
         
         <label for="nova_senha">Nova Senha:</label>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Atualizar Cadastro</title>
-    <link rel="stylesheet" href="../static/css/atualizar_cadastro.css">
+    <link rel="stylesheet" href="/static/css/atualizar_cadastro.css">
 </head>
 <body>
 
@@ -12,7 +12,7 @@
         Atualizar Cadastro
     </div>
     <div class="home-button-container">
-        <a href="index.html">Início</a>
+        <a href="/">Início</a>
     </div>
     <div class="container">
         <div class="box">
@@ -47,7 +47,7 @@
                 </div>
                 <button type="submit" class="btn-primary">Atualizar</button>
             </form>
-            <form method="POST" action="/excluir_cadastro">
+            <form method="POST" action="/excluir_cadastro" onsubmit="return confirm('Tem certeza de que quer excluir?');">
                 <button type="submit">Excluir Cadastro</button>
             </form>
         </div>
