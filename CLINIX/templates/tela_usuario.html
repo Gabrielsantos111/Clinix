@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/static/css/tela_usuario.css">
     
     <style>
+        /* Estilo para a tabela de médicos (da nossa alteração anterior) */
         .medicos-table {
             width: 100%;
             border-collapse: collapse;
@@ -39,10 +40,56 @@
         .button-group form {
             display: inline-block; /* Alinha os botões de formulário */
         }
+        
+        /* Novo CSS para o Alerta Pop-up */
+        .flash-alert-popup {
+            position: fixed; /* Fica fixo na tela */
+            top: 20px;       /* Distância do topo */
+            left: 50%;
+            transform: translateX(-50%); /* Centraliza horizontalmente */
+            
+            /* --- COR ATUALIZADA AQUI --- */
+            background-color: #0d6efd;  /* COR MUDADA: Cor de confirmação (Azul) */
+            
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            z-index: 2000; /* Garante que fique acima de tudo */
+            font-size: 16px;
+            font-weight: bold;
+            opacity: 1; /* Começa 100% visível */
+            
+            /* Define a animação: 
+               Nome: fadeOut
+               Duração: 5 segundos
+               Delay: Começa após 1 segundo
+               Modo: Mantém o estado final (invisível)
+            */
+            animation: fadeOut 5s 1s forwards;
+        }
+
+        /* Definição da Animação (Keyframes) */
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0;
+                visibility: hidden; /* Oculta o elemento após sumir */
+            }
+        }
     </style>
-</head>
+    </head>
 <body>
 
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash-alert-popup">
+          {{ messages[0] }}
+        </div>
+      {% endif %}
+    {% endwith %}
     <div class="header">
         Perfil do Paciente
     </div>
@@ -79,6 +126,7 @@
             {% endif %}
             <hr> <h2 style="margin-top: 20px;">Minha Conta</h2>
             <div class="button-group">
+                
                 <button onclick="window.location.href='/pag_download'">Baixar Arquivos</button>
                 
                 <form action="/atualizar_cadastro" method="get">
