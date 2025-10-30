@@ -2,11 +2,15 @@ from flask import Flask, render_template, redirect, request, flash, send_from_di
 import json
 import ast
 import os
+import urllib.parse  # <--- ADICIONADO PARA LER A URL DO BANCO
 import mysql.connector
 import random
 import string
 from flask_mail import Mail, Message
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
+
+load_dotenv()
 
 #inicia Flask
 app = Flask(__name__)
@@ -23,8 +27,48 @@ app.config['MAIL_DEFAULT_SENDER'] = ('Consulta Online', 'clinix.projeto@gmail.co
 # Inicializar Flask-Mail
 mail = Mail(app)
 
-# REMOVIDA: A variável global 'logado' foi removida.
-# logado = False 
+# --- CONFIGURAÇÃO CENTRAL DE BANCO DE DADOS ---
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+def get_db_connection():
+    """
+    Cria e retorna uma nova conexão com o banco de dados.
+    Lê a URL de conexão a partir das variáveis de ambiente.
+    """
+    if not DATABASE_URL:
+        # Se não encontrar a variável no Vercel, vai dar este erro claro.
+        raise ValueError("A variável de ambiente 'DATABASE_URL' não foi definida.")
+    
+    # O urllib.parse vai quebrar a URL (mysql://user:pass@host:port/db)
+    try:
+        parsed_url = urllib.parse.urlparse(DATABASE_URL)
+        
+        db_host = parsed_url.hostname
+        db_port = parsed_url.port
+        db_user = parsed_url.username
+        db_password = parsed_url.password
+        db_name = parsed_url.path[1:] # Remove a barra "/" inicial
+
+        # Conecta usando as credenciais da variável de ambiente
+        conexao = mysql.connector.connect(
+            host=db_host,
+            port=db_port,
+            user=db_user,
+            password=db_password,
+            database=db_name
+        )
+        return conexao
+    except mysql.connector.Error as err:
+        # Isso ajudará a depurar erros de conexão nos logs do Vercel
+        print(f"ERRO AO CONECTAR AO BANCO DE DADOS: {err}")
+        raise err # Levanta o erro para parar a execução da rota
+    except Exception as e:
+        # Pega outros erros (ex: URL mal formatada)
+        print(f"ERRO AO PARSEAR DATABASE_URL: {e}")
+        raise ValueError(f"DATABASE_URL mal formatada: {DATABASE_URL}")
+
+# --- FIM DA CONFIGURAÇÃO DE BANCO DE DADOS ---
+
 
 from datetime import datetime
 
@@ -41,7 +85,7 @@ def datetimeformat(value):
 #função para obter informações do usuário
 def obter_informacoes_usuario(email):
     #Conecta ao banco de dados MySQL
-    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+    conexao_bd = get_db_connection() # <-- ALTERADO
     if conexao_bd.is_connected():
         cursor = conexao_bd.cursor()
         cursor.execute('SELECT emailUsuario, nomeUsuario, sexoUsuario, idadeUsuario, telefoneUsuario, enderecoUsuario FROM usuario WHERE emailUsuario = %s', (email,))
@@ -61,7 +105,7 @@ def obter_informacoes_usuario(email):
 
 def obter_informacoes_medico(crm):
     # Conecta ao banco de dados MySQL
-    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+    conexao_bd = get_db_connection() # <-- ALTERADO
     if conexao_bd.is_connected():
         cursor = conexao_bd.cursor()
         cursor.execute('SELECT nomeMedicos, emailMedicos, idadeMedicos, statusMedicos, crmMedicos FROM medicos WHERE crmMedicos = %s', (crm,))
@@ -108,7 +152,7 @@ def tela_usuario():
             if usuario:
                 # 2. Busca a lista de médicos ativos
                 medicos = [] # Lista padrão
-                conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+                conexao_bd = get_db_connection() # <-- ALTERADO
                 if conexao_bd.is_connected():
                     try:
                         cursor = conexao_bd.cursor()
@@ -150,7 +194,7 @@ def login():
         senha = request.form.get('senha')
 
         # Conecta ao banco de dados MySQL
-        conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+        conexao_bd = get_db_connection() # <-- ALTERADO
         if conexao_bd.is_connected():
             try:
                 cursor = conexao_bd.cursor()
@@ -203,7 +247,7 @@ def cadastrarUsuario():
         return redirect('/cadastro')
 
     #conecta ao banco de dados MySQL
-    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+    conexao_bd = get_db_connection() # <-- ALTERADO
     if conexao_bd.is_connected():
         cursor = conexao_bd.cursor()
         cursor.execute('INSERT INTO usuario (nomeUsuario, emailUsuario, senhaUsuario, idadeUsuario, sexoUsuario, telefoneUsuario, enderecoUsuario) VALUES (%s, %s, %s, %s, %s, %s, %s)', (nome, email, senha, idade, sexo, telefone, endereco))
@@ -247,7 +291,7 @@ def esqueci_senha():
         return render_template('esqueci_senha.html')
     # Processar lógica de redefinição no método POST
     email_usuario = request.form.get('email')
-    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+    conexao_bd = get_db_connection() # <-- ALTERADO
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
@@ -268,7 +312,7 @@ def esqueci_senha():
             token = s.dumps(email_usuario, salt='redefinir-senha')
 
             # Envia o e-mail com o link de redefinição
-            link = f"http://127.0.0.1:5000/redefinir_senha/{token}"
+            link = f"http://127.0.0.1:5000/redefinir_senha/{token}" # ATENÇÃO: Trocar '127.0.0.1:5000' pela URL do Vercel
             msg = Message("Redefinição de Senha", recipients=[email_usuario])
             msg.body = f'''
             Olá,
@@ -304,7 +348,7 @@ def redefinir_senha(token):
 
     if request.method == 'POST':
         nova_senha = request.form.get('nova_senha')
-        conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+        conexao_bd = get_db_connection() # <-- ALTERADO
         if conexao_bd.is_connected():
             try:
                 cursor = conexao_bd.cursor()
@@ -328,7 +372,7 @@ def tela_medico():
     # CORREÇÃO: Trocado 'if logado:' por 'if 'email' in session:'
     # Esta rota deve ser acessível se o usuário estiver logado
     if 'email' in session: 
-        conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+        conexao_bd = get_db_connection() # <-- ALTERADO
         if conexao_bd.is_connected():
             try:
                 cursor = conexao_bd.cursor()
@@ -381,7 +425,7 @@ def processar_atualizacao():
             return redirect('/atualizar_cadastro')
 
         # Conecta ao banco de dados MySQL
-        conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+        conexao_bd = get_db_connection() # <-- ALTERADO
         if conexao_bd.is_connected():
             cursor = conexao_bd.cursor()
             cursor.execute('UPDATE usuario SET nomeUsuario = %s, senhaUsuario = %s, idadeUsuario = %s, sexoUsuario = %s, telefoneUsuario = %s, enderecoUsuario = %s WHERE emailUsuario = %s', (nome, senha, idade, sexo, telefone, endereco, email))
@@ -410,7 +454,7 @@ def excluir_cadastro():
     if 'email' in session:
         email = session.get('email')
         # Conecta ao banco de dados MySQL
-        conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+        conexao_bd = get_db_connection() # <-- ALTERADO
         if conexao_bd.is_connected():
             cursor = conexao_bd.cursor()
             cursor.execute('DELETE FROM usuario WHERE emailUsuario = %s', (email,))
@@ -436,12 +480,7 @@ def pag_medico():
 
     crm_logado = session.get('crm')  # Obtém o CRM da sessão
     # Conecta ao banco de dados MySQL
-    conexao_bd = mysql.connector.connect(
-        host='localhost', 
-        database='consulta_net', 
-        user='root', 
-        password='gcc272'
-    )
+    conexao_bd = get_db_connection() # <-- ALTERADO
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
@@ -497,12 +536,7 @@ def cadastro_medico():
         senha = request.form.get('senha')
         especialidade = request.form.get('especialidade')
         # Conecta ao banco de dados MySQL
-        conexao_bd = mysql.connector.connect(
-            host='localhost', 
-            database='consulta_net', 
-            user='root', 
-            password='gcc272'
-        )
+        conexao_bd = get_db_connection() # <-- ALTERADO
         cursor = conexao_bd.cursor()
         # Insere os dados do médico na tabela 'medicos'
         cursor.execute('''
@@ -522,12 +556,7 @@ def cadastro_medico():
         conexao_bd.close()
         return redirect('/pag_medico')
     # Se for um GET, busca as especialidades disponíveis
-    conexao_bd = mysql.connector.connect(
-        host='localhost', 
-        database='consulta_net', 
-        user='root', 
-        password='gcc272'
-    )
+    conexao_bd = get_db_connection() # <-- ALTERADO
     cursor = conexao_bd.cursor()
     cursor.execute('SELECT idEspecialidade, nomeEspecialidade FROM especialidades')
     especialidades = cursor.fetchall()
@@ -546,7 +575,7 @@ def login_medico():
             return redirect('/login_medico')
         # Conecta ao banco de dados MySQL
         try:
-            conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+            conexao_bd = get_db_connection() # <-- ALTERADO
             if conexao_bd.is_connected():
                 cursor = conexao_bd.cursor()
                 cursor.execute('SELECT * FROM medicos WHERE crmMedicos = %s AND senhaMedicos = %s', (crm, senha))
@@ -579,7 +608,7 @@ def excluir_cadastro_medico():
 
     crm = session.get('crm')  # Obtém o CRM da sessão
     # Conecta ao banco de dados MySQL
-    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+    conexao_bd = get_db_connection() # <-- ALTERADO
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
@@ -629,7 +658,7 @@ def atualizar_cadastro_medico():
     crm_logado = session.get('crm')
 
     if request.method == 'GET':
-        conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+        conexao_bd = get_db_connection() # <-- ALTERADO
         if conexao_bd.is_connected():
             cursor = conexao_bd.cursor()
             # Correção de índice já aplicada
@@ -655,7 +684,7 @@ def atualizar_cadastro_medico():
         if not nome or not email or not idade or not status or not senha:
             flash('Todos os campos são obrigatórios')
             return redirect('/atualizar_cadastro_medico')
-        conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+        conexao_bd = get_db_connection() # <-- ALTERADO
         if conexao_bd.is_connected():
             try:
                 cursor = conexao_bd.cursor()
@@ -687,12 +716,7 @@ def alterar_disponibilidade():
         return redirect('/login_medico')
 
     if request.method == 'POST':
-        conexao_bd = mysql.connector.connect(
-            host='localhost', 
-            database='consulta_net', 
-            user='root', 
-            password='gcc272'
-        )
+        conexao_bd = get_db_connection() # <-- ALTERADO
  
         if conexao_bd.is_connected():
             try:
@@ -801,7 +825,7 @@ def agendar_consulta():
         flash("Por favor, faça login primeiro.")
         return redirect('/')
 
-    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+    conexao_bd = get_db_connection() # <-- ALTERADO
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
@@ -875,12 +899,7 @@ def consultar_agendamentos():
         return redirect('/login')
     
     email_usuario = session.get('email') # CORREÇÃO: Obter o email
-    conexao_bd = mysql.connector.connect(
-        host='localhost',
-        database='consulta_net',
-        user='root',
-        password='gcc272'
-    )
+    conexao_bd = get_db_connection() # <-- ALTERADO
 
     if conexao_bd.is_connected():
         try:
@@ -922,7 +941,7 @@ def disponibilidades(id_medico):
     conexao_bd = None
     try:
         print("[DEBUG] Tentando conectar ao banco de dados...")
-        conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+        conexao_bd = get_db_connection() # <-- ALTERADO
         print("[DEBUG] Conexão com BD estabelecida.")
         
         # Removido if conexao_bd.is_connected() pois connect() já levanta exceção em falha.
@@ -1050,7 +1069,7 @@ def disponibilidades(id_medico):
 # --- ROTA MODIFICADA (QUERY CORRIGIDA) ---
 @app.route('/calendario_medico/<int:id_medico>')
 def calendario_medico(id_medico):
-    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+    conexao_bd = get_db_connection() # <-- ALTERADO
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
@@ -1089,7 +1108,7 @@ def calendario_medico(id_medico):
 @app.route('/cancelar_consulta', methods=['POST'])
 def cancelar_consulta():
     id_agendamento = request.form.get('idAgendamento')
-    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+    conexao_bd = get_db_connection() # <-- ALTERADO
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
@@ -1147,7 +1166,7 @@ def cancelar_consulta():
 
 @app.route('/gerenciar_disponibilidades/<int:id_medico>')
 def gerenciar_disponibilidades(id_medico):
-    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+    conexao_bd = get_db_connection() # <-- ALTERADO
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
@@ -1170,7 +1189,7 @@ def gerenciar_disponibilidades(id_medico):
 @app.route('/excluir_disponibilidade', methods=['POST'])
 def excluir_disponibilidade():
     id_disponibilidade = request.form.get('idDisponibilidade')
-    conexao_bd = mysql.connector.connect(host='localhost', database='consulta_net', user='root', password='gcc272')
+    conexao_bd = get_db_connection() # <-- ALTERADO
     if conexao_bd.is_connected():
         try:
             cursor = conexao_bd.cursor()
