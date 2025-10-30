@@ -2,7 +2,7 @@
 body {
     font-family: Arial, sans-serif;
     /* Reutilizando o fundo das outras páginas para manter a consistência */
-    background: url('../imagens/WhatsApp Image 2024-11-20 at 14.52.11.jpeg') no-repeat center center fixed;
+    background: url('../imagens/background.jpg') no-repeat center center fixed;
     background-size: cover;
     
     /* Centraliza o formulário na tela (vertical e horizontalmente) */
