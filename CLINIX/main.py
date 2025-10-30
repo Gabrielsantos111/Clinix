@@ -29,6 +29,7 @@ mail = Mail(app)
 
 # --- CONFIGURAÇÃO CENTRAL DE BANCO DE DADOS ---
 DATABASE_URL = os.environ.get('DATABASE_URL')
+BASE_URL = os.environ.get('BASE_URL', 'http://127.0.0.1:5000')
 
 def get_db_connection():
     """
@@ -312,7 +313,7 @@ def esqueci_senha():
             token = s.dumps(email_usuario, salt='redefinir-senha')
 
             # Envia o e-mail com o link de redefinição
-            link = f"http://127.0.0.1:5000/redefinir_senha/{token}" # ATENÇÃO: Trocar '127.0.0.1:5000' pela URL do Vercel
+            link = f"{BASE_URL}/redefinir_senha/{token}"
             msg = Message("Redefinição de Senha", recipients=[email_usuario])
             msg.body = f'''
             Olá,
